@@ -12,11 +12,13 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@hookform/resolvers": "^7.0.6",
     "konva": "^10.9.1",
     "lucide-react": "^1.72.0",
     "next": "^16.4.6",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "react-hook-form": "^7.92.0",
     "react-konva": "^19.3.2",
     "zod": "^4.3.6",
     "zustand": "^5.1.0"

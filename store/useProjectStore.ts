@@ -2,6 +2,11 @@
 
 import { create } from "zustand";
 import { createEmptyProject, createExampleProject } from "@/features/projects/defaults";
+import { loadSavedProfileCatalog, saveProfileCatalog } from "@/features/profiles/storage";
+import {
+  detectProjectJoints,
+  estimateJointPerimeterWeldMm,
+} from "@/features/joints/detectJoints";
 import { getElementLengthMm, resizeElementEndByLength, roundMm } from "@/lib/geometry/elements";
 import type {
   CalculationSettings,
@@ -41,6 +46,7 @@ interface ProjectStoreState {
   activeTool: DrawingTool;
   activeProfileId: string;
   selectedElementIds: string[];
+  selectedJointId: string | null;
   saveStatus: SaveStatus;
   lastError: string | null;
   historyPast: HistorySnapshot[];
@@ -51,6 +57,7 @@ interface ProjectStoreState {
   setActiveProfileId: (profileId: string) => void;
   selectElement: (elementId: string | null, additive?: boolean) => void;
   selectMultipleElements: (elementIds: string[], additive?: boolean) => void;
+  selectJoint: (jointId: string | null) => void;
   clearSelection: () => void;
 
   // Вид и сетка
@@ -58,6 +65,7 @@ interface ProjectStoreState {
   setCameraPreset: (preset: CameraPreset) => void;
   setZoomPercent: (zoomPercent: number) => void;
   setPanOffsetMm: (offsetMm: Point2D) => void;
+  setShowJoints: (show: boolean) => void;
   updateGridSettings: (patch: Partial<GridSettings>) => void;
 
   // Операции с элементами (единая модель)
@@ -79,6 +87,16 @@ interface ProjectStoreState {
   addProfile: (profile: Omit<MaterialProfile, "id">) => string;
   updateProfile: (id: string, patch: Partial<MaterialProfile>) => void;
   deleteProfile: (id: string) => { ok: boolean; reason?: string };
+  assignProfileToElements: (elementIds: string[], profileId: string) => void;
+  replaceProfileInProject: (oldProfileId: string, newProfileId: string) => void;
+  saveCatalogAsDefault: () => boolean;
+
+  // Соединения и сварка
+  detectAndSyncJoints: () => number;
+  addManualJoint: (joint: Omit<JointConnection, "id">) => string;
+  updateJoint: (id: string, patch: Partial<JointConnection>) => void;
+  deleteJoint: (id: string) => void;
+  estimateAllWeldLengthsByPerimeter: () => void;
 
   // Настройки расчёта
   updateCalculationSettings: (patch: Partial<CalculationSettings>) => void;
@@ -159,6 +177,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   activeTool: "select",
   activeProfileId: initialProject.profiles[2]?.id ?? initialProject.profiles[0]?.id ?? "",
   selectedElementIds: [],
+  selectedJointId: null,
   saveStatus: "saved",
   lastError: null,
   historyPast: [],
@@ -171,7 +190,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   selectElement: (elementId, additive = false) =>
     set((state) => {
       if (!elementId) {
-        return { selectedElementIds: [] };
+        return { selectedElementIds: [], selectedJointId: null };
       }
       const expanded = expandSelectionWithGroups(
         state.project.elements,
@@ -179,17 +198,19 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         [elementId]
       );
       if (!additive) {
-        return { selectedElementIds: expanded };
+        return { selectedElementIds: expanded, selectedJointId: null };
       }
       const allPresent = expanded.every((id) => state.selectedElementIds.includes(id));
       if (allPresent) {
         const removeSet = new Set(expanded);
         return {
           selectedElementIds: state.selectedElementIds.filter((id) => !removeSet.has(id)),
+          selectedJointId: null,
         };
       }
       return {
         selectedElementIds: Array.from(new Set([...state.selectedElementIds, ...expanded])),
+        selectedJointId: null,
       };
     }),
 
@@ -201,14 +222,21 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         elementIds
       );
       if (!additive) {
-        return { selectedElementIds: expanded };
+        return { selectedElementIds: expanded, selectedJointId: null };
       }
       return {
         selectedElementIds: Array.from(new Set([...state.selectedElementIds, ...expanded])),
+        selectedJointId: null,
       };
     }),
 
-  clearSelection: () => set({ selectedElementIds: [] }),
+  selectJoint: (jointId) =>
+    set({
+      selectedJointId: jointId,
+      selectedElementIds: [],
+    }),
+
+  clearSelection: () => set({ selectedElementIds: [], selectedJointId: null }),
 
   setViewMode: (viewMode) =>
     set((state) => ({
@@ -248,6 +276,19 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
           panOffsetMm: { x: panOffsetMm.x, y: panOffsetMm.y },
         },
       },
+    })),
+
+  setShowJoints: (showJoints) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        displaySettings: {
+          ...state.project.displaySettings,
+          showJoints,
+        },
+        updatedAt: new Date().toISOString(),
+      },
+      saveStatus: "unsaved",
     })),
 
   updateGridSettings: (patch) =>
@@ -614,29 +655,37 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   addProfile: (profileInput) => {
     const id = `prof-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const newProfile: MaterialProfile = { ...profileInput, id, isExample: false };
-    set((state) => ({
-      project: {
-        ...state.project,
-        profiles: [...state.project.profiles, newProfile],
-        updatedAt: new Date().toISOString(),
-      },
-      activeProfileId: id,
-      saveStatus: "unsaved",
-    }));
+    set((state) => {
+      const nextProfiles = [...state.project.profiles, newProfile];
+      saveProfileCatalog(nextProfiles);
+      return {
+        project: {
+          ...state.project,
+          profiles: nextProfiles,
+          updatedAt: new Date().toISOString(),
+        },
+        activeProfileId: id,
+        saveStatus: "unsaved",
+      };
+    });
     return id;
   },
 
   updateProfile: (id, patch) =>
-    set((state) => ({
-      project: {
-        ...state.project,
-        profiles: state.project.profiles.map((p) =>
-          p.id === id ? { ...p, ...patch, isExample: false } : p
-        ),
-        updatedAt: new Date().toISOString(),
-      },
-      saveStatus: "unsaved",
-    })),
+    set((state) => {
+      const nextProfiles = state.project.profiles.map((p) =>
+        p.id === id ? { ...p, ...patch, isExample: false } : p
+      );
+      saveProfileCatalog(nextProfiles);
+      return {
+        project: {
+          ...state.project,
+          profiles: nextProfiles,
+          updatedAt: new Date().toISOString(),
+        },
+        saveStatus: "unsaved",
+      };
+    }),
 
   deleteProfile: (id) => {
     const state = get();
@@ -655,6 +704,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     }
 
     const nextProfiles = state.project.profiles.filter((p) => p.id !== id);
+    saveProfileCatalog(nextProfiles);
     set({
       project: {
         ...state.project,
@@ -667,6 +717,162 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     });
     return { ok: true };
   },
+
+  assignProfileToElements: (elementIds, profileId) =>
+    set((state) => {
+      if (elementIds.length === 0) return state;
+      const profileExists = state.project.profiles.some((p) => p.id === profileId);
+      if (!profileExists) return state;
+
+      const idSet = new Set(elementIds);
+      const snapshot = cloneSnapshot(state.project);
+
+      return {
+        project: {
+          ...state.project,
+          elements: state.project.elements.map((el) =>
+            idSet.has(el.id) ? { ...el, profileId } : el
+          ),
+          updatedAt: new Date().toISOString(),
+        },
+        saveStatus: "unsaved",
+        historyPast: [...state.historyPast.slice(-49), snapshot],
+        historyFuture: [],
+      };
+    }),
+
+  replaceProfileInProject: (oldProfileId, newProfileId) =>
+    set((state) => {
+      if (oldProfileId === newProfileId) return state;
+      const targetExists = state.project.profiles.some((p) => p.id === newProfileId);
+      if (!targetExists) return state;
+
+      const hasAffected = state.project.elements.some((el) => el.profileId === oldProfileId);
+      if (!hasAffected) return state;
+
+      const snapshot = cloneSnapshot(state.project);
+      return {
+        project: {
+          ...state.project,
+          elements: state.project.elements.map((el) =>
+            el.profileId === oldProfileId ? { ...el, profileId: newProfileId } : el
+          ),
+          updatedAt: new Date().toISOString(),
+        },
+        saveStatus: "unsaved",
+        historyPast: [...state.historyPast.slice(-49), snapshot],
+        historyFuture: [],
+      };
+    }),
+
+  saveCatalogAsDefault: () => {
+    return saveProfileCatalog(get().project.profiles);
+  },
+
+  detectAndSyncJoints: () => {
+    const state = get();
+    const snapshot = cloneSnapshot(state.project);
+    const nextJoints = detectProjectJoints(state.project.elements, state.project.joints);
+    set({
+      project: {
+        ...state.project,
+        joints: nextJoints,
+        updatedAt: new Date().toISOString(),
+      },
+      selectedJointId: null,
+      saveStatus: "unsaved",
+      historyPast: [...state.historyPast.slice(-49), snapshot],
+      historyFuture: [],
+    });
+    return nextJoints.length;
+  },
+
+  addManualJoint: (jointInput) => {
+    const id = `j-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const state = get();
+    const snapshot = cloneSnapshot(state.project);
+    const newJoint: JointConnection = {
+      ...jointInput,
+      id,
+      position: { ...jointInput.position },
+      elementIds: [...jointInput.elementIds],
+    };
+    set({
+      project: {
+        ...state.project,
+        joints: [...state.project.joints, newJoint],
+        updatedAt: new Date().toISOString(),
+      },
+      selectedJointId: id,
+      selectedElementIds: [],
+      saveStatus: "unsaved",
+      historyPast: [...state.historyPast.slice(-49), snapshot],
+      historyFuture: [],
+    });
+    return id;
+  },
+
+  updateJoint: (id, patch) =>
+    set((state) => {
+      const target = state.project.joints.find((j) => j.id === id);
+      if (!target) return state;
+      const snapshot = cloneSnapshot(state.project);
+      return {
+        project: {
+          ...state.project,
+          joints: state.project.joints.map((j) =>
+            j.id === id ? { ...j, ...patch } : j
+          ),
+          updatedAt: new Date().toISOString(),
+        },
+        saveStatus: "unsaved",
+        historyPast: [...state.historyPast.slice(-49), snapshot],
+        historyFuture: [],
+      };
+    }),
+
+  deleteJoint: (id) =>
+    set((state) => {
+      const snapshot = cloneSnapshot(state.project);
+      return {
+        project: {
+          ...state.project,
+          joints: state.project.joints.filter((j) => j.id !== id),
+          updatedAt: new Date().toISOString(),
+        },
+        selectedJointId: state.selectedJointId === id ? null : state.selectedJointId,
+        saveStatus: "unsaved",
+        historyPast: [...state.historyPast.slice(-49), snapshot],
+        historyFuture: [],
+      };
+    }),
+
+  estimateAllWeldLengthsByPerimeter: () =>
+    set((state) => {
+      const snapshot = cloneSnapshot(state.project);
+      const updatedJoints = state.project.joints.map((joint) => {
+        if (joint.weldLengthMm !== null && joint.weldLengthMm !== undefined) {
+          return joint;
+        }
+        const estimated = estimateJointPerimeterWeldMm(
+          joint,
+          state.project.elements,
+          state.project.profiles
+        );
+        return estimated !== null ? { ...joint, weldLengthMm: estimated } : joint;
+      });
+
+      return {
+        project: {
+          ...state.project,
+          joints: updatedJoints,
+          updatedAt: new Date().toISOString(),
+        },
+        saveStatus: "unsaved",
+        historyPast: [...state.historyPast.slice(-49), snapshot],
+        historyFuture: [],
+      };
+    }),
 
   updateCalculationSettings: (patch) =>
     set((state) => ({
@@ -733,6 +939,8 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
 
   createNewProject: (name = "Новый проект") => {
     const nextProject = createEmptyProject(name);
+    const savedCatalog = loadSavedProfileCatalog();
+    nextProject.profiles = savedCatalog;
     set({
       project: nextProject,
       activeProfileId: nextProject.profiles[0]?.id ?? "",

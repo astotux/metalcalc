@@ -46,10 +46,12 @@ export default function KonvaCanvas2D() {
   const activeTool = useProjectStore((s) => s.activeTool);
   const activeProfileId = useProjectStore((s) => s.activeProfileId);
   const selectedElementIds = useProjectStore((s) => s.selectedElementIds);
+  const selectedJointId = useProjectStore((s) => s.selectedJointId);
 
   const setActiveTool = useProjectStore((s) => s.setActiveTool);
   const selectElement = useProjectStore((s) => s.selectElement);
   const selectMultipleElements = useProjectStore((s) => s.selectMultipleElements);
+  const selectJoint = useProjectStore((s) => s.selectJoint);
   const clearSelection = useProjectStore((s) => s.clearSelection);
   const addElement = useProjectStore((s) => s.addElement);
   const addElementsBatch = useProjectStore((s) => s.addElementsBatch);
@@ -1007,16 +1009,23 @@ export default function KonvaCanvas2D() {
           {project.displaySettings.showJoints &&
             project.joints.map((joint) => {
               const p = worldToScreen(joint.position);
+              const isSelectedJoint = selectedJointId === joint.id;
               return (
                 <Circle
                   key={joint.id}
                   x={p.x}
                   y={p.y}
-                  radius={4}
-                  fill="#fbbf24"
-                  stroke="#141619"
-                  strokeWidth={1.5}
-                  listening={false}
+                  radius={isSelectedJoint ? 6.5 : 4.5}
+                  fill={isSelectedJoint ? "#ffffff" : "#fbbf24"}
+                  stroke={isSelectedJoint ? "#3b82f6" : "#141619"}
+                  strokeWidth={isSelectedJoint ? 2.5 : 1.5}
+                  hitStrokeWidth={12}
+                  onMouseDown={(evt) => {
+                    if (activeTool === "select" && evt.evt.button === 0) {
+                      evt.cancelBubble = true;
+                      selectJoint(joint.id);
+                    }
+                  }}
                 />
               );
             })}
