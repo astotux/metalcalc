@@ -1,0 +1,605 @@
+"use client";
+
+import { create } from "zustand";
+import { createEmptyProject, createExampleProject } from "@/features/projects/defaults";
+import { getElementLengthMm, resizeElementEndByLength, roundMm } from "@/lib/geometry/elements";
+import type {
+  CalculationSettings,
+  CameraPreset,
+  ConstructionElement,
+  DrawingTool,
+  GridSettings,
+  JointConnection,
+  MaterialProfile,
+  MetalCalcProject,
+  Point3D,
+  SaveStatus,
+  ViewMode,
+} from "@/types";
+
+const STORAGE_KEY_PROJECTS = "metalcalc_projects_v1";
+const STORAGE_KEY_ACTIVE_ID = "metalcalc_active_project_id_v1";
+
+interface HistorySnapshot {
+  elements: ConstructionElement[];
+  joints: JointConnection[];
+}
+
+export interface ProjectSummary {
+  id: string;
+  name: string;
+  isExample: boolean;
+  elementCount: number;
+  updatedAt: string;
+}
+
+interface ProjectStoreState {
+  project: MetalCalcProject;
+  activeTool: DrawingTool;
+  activeProfileId: string;
+  selectedElementIds: string[];
+  saveStatus: SaveStatus;
+  lastError: string | null;
+  historyPast: HistorySnapshot[];
+  historyFuture: HistorySnapshot[];
+
+  // Инструменты и выделение
+  setActiveTool: (tool: DrawingTool) => void;
+  setActiveProfileId: (profileId: string) => void;
+  selectElement: (elementId: string | null, additive?: boolean) => void;
+  clearSelection: () => void;
+
+  // Вид и сетка
+  setViewMode: (mode: ViewMode) => void;
+  setCameraPreset: (preset: CameraPreset) => void;
+  setZoomPercent: (zoomPercent: number) => void;
+  updateGridSettings: (patch: Partial<GridSettings>) => void;
+
+  // Операции с элементами (единая модель)
+  addElement: (start: Point3D, end: Point3D, profileId?: string) => string;
+  updateElement: (id: string, patch: Partial<ConstructionElement>) => void;
+  resizeElementLength: (id: string, targetLengthMm: number) => void;
+  deleteElements: (ids: string[]) => void;
+  duplicateElement: (id: string) => string | null;
+
+  // Каталог профилей
+  addProfile: (profile: Omit<MaterialProfile, "id">) => string;
+  updateProfile: (id: string, patch: Partial<MaterialProfile>) => void;
+  deleteProfile: (id: string) => { ok: boolean; reason?: string };
+
+  // Настройки расчёта
+  updateCalculationSettings: (patch: Partial<CalculationSettings>) => void;
+
+  // История Undo / Redo
+  undo: () => void;
+  redo: () => void;
+
+  // Управление проектами (локальное хранилище до подключения Supabase)
+  renameProject: (name: string) => void;
+  createNewProject: (name?: string) => void;
+  loadExampleProject: () => void;
+  saveCurrentProject: () => boolean;
+  openProjectById: (id: string) => boolean;
+  duplicateCurrentProject: () => void;
+  deleteSavedProject: (id: string) => void;
+  getSavedProjectSummaries: () => ProjectSummary[];
+  hydrateFromStorage: () => void;
+}
+
+function cloneSnapshot(project: MetalCalcProject): HistorySnapshot {
+  return {
+    elements: project.elements.map((el) => ({
+      ...el,
+      start: { ...el.start },
+      end: { ...el.end },
+    })),
+    joints: project.joints.map((j) => ({
+      ...j,
+      elementIds: [...j.elementIds],
+      position: { ...j.position },
+    })),
+  };
+}
+
+function readStoredProjects(): Record<string, MetalCalcProject> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY_PROJECTS);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, MetalCalcProject>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeStoredProjects(projectsMap: Record<string, MetalCalcProject>): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(projectsMap));
+}
+
+const initialProject = createExampleProject();
+
+export const useProjectStore = create<ProjectStoreState>((set, get) => ({
+  project: initialProject,
+  activeTool: "select",
+  activeProfileId: initialProject.profiles[2]?.id ?? initialProject.profiles[0]?.id ?? "",
+  selectedElementIds: [],
+  saveStatus: "saved",
+  lastError: null,
+  historyPast: [],
+  historyFuture: [],
+
+  setActiveTool: (tool) => set({ activeTool: tool }),
+
+  setActiveProfileId: (profileId) => set({ activeProfileId: profileId }),
+
+  selectElement: (elementId, additive = false) =>
+    set((state) => {
+      if (!elementId) {
+        return { selectedElementIds: [] };
+      }
+      if (!additive) {
+        return { selectedElementIds: [elementId] };
+      }
+      const exists = state.selectedElementIds.includes(elementId);
+      return {
+        selectedElementIds: exists
+          ? state.selectedElementIds.filter((id) => id !== elementId)
+          : [...state.selectedElementIds, elementId],
+      };
+    }),
+
+  clearSelection: () => set({ selectedElementIds: [] }),
+
+  setViewMode: (viewMode) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        displaySettings: { ...state.project.displaySettings, viewMode },
+        updatedAt: new Date().toISOString(),
+      },
+      saveStatus: "unsaved",
+    })),
+
+  setCameraPreset: (cameraPreset) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        displaySettings: { ...state.project.displaySettings, cameraPreset },
+      },
+    })),
+
+  setZoomPercent: (zoomPercent) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        displaySettings: {
+          ...state.project.displaySettings,
+          zoomPercent: Math.min(400, Math.max(10, Math.round(zoomPercent))),
+        },
+      },
+    })),
+
+  updateGridSettings: (patch) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        gridSettings: { ...state.project.gridSettings, ...patch },
+        updatedAt: new Date().toISOString(),
+      },
+      saveStatus: "unsaved",
+    })),
+
+  addElement: (start, end, profileId) => {
+    const state = get();
+    const id = `el-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const chosenProfileId =
+      profileId ?? state.activeProfileId ?? state.project.profiles[0]?.id ?? "";
+
+    const newElement: ConstructionElement = {
+      id,
+      type: "beam",
+      start: { x: roundMm(start.x), y: roundMm(start.y), z: roundMm(start.z) },
+      end: { x: roundMm(end.x), y: roundMm(end.y), z: roundMm(end.z) },
+      profileId: chosenProfileId,
+    };
+
+    const snapshot = cloneSnapshot(state.project);
+
+    set({
+      project: {
+        ...state.project,
+        elements: [...state.project.elements, newElement],
+        updatedAt: new Date().toISOString(),
+      },
+      selectedElementIds: [id],
+      saveStatus: "unsaved",
+      historyPast: [...state.historyPast.slice(-49), snapshot],
+      historyFuture: [],
+    });
+
+    return id;
+  },
+
+  updateElement: (id, patch) =>
+    set((state) => {
+      const target = state.project.elements.find((el) => el.id === id);
+      if (!target) return state;
+
+      const snapshot = cloneSnapshot(state.project);
+      const updatedElements = state.project.elements.map((el) =>
+        el.id === id
+          ? {
+              ...el,
+              ...patch,
+              start: patch.start ? { ...patch.start } : el.start,
+              end: patch.end ? { ...patch.end } : el.end,
+            }
+          : el
+      );
+
+      return {
+        project: {
+          ...state.project,
+          elements: updatedElements,
+          updatedAt: new Date().toISOString(),
+        },
+        saveStatus: "unsaved",
+        historyPast: [...state.historyPast.slice(-49), snapshot],
+        historyFuture: [],
+      };
+    }),
+
+  resizeElementLength: (id, targetLengthMm) =>
+    set((state) => {
+      const target = state.project.elements.find((el) => el.id === id);
+      if (!target || targetLengthMm <= 0) return state;
+
+      const currentLength = getElementLengthMm(target);
+      if (Math.abs(currentLength - targetLengthMm) < 0.01) return state;
+
+      const snapshot = cloneSnapshot(state.project);
+      const nextEnd = resizeElementEndByLength(target, targetLengthMm);
+
+      return {
+        project: {
+          ...state.project,
+          elements: state.project.elements.map((el) =>
+            el.id === id ? { ...el, end: nextEnd } : el
+          ),
+          updatedAt: new Date().toISOString(),
+        },
+        saveStatus: "unsaved",
+        historyPast: [...state.historyPast.slice(-49), snapshot],
+        historyFuture: [],
+      };
+    }),
+
+  deleteElements: (ids) =>
+    set((state) => {
+      if (ids.length === 0) return state;
+      const idSet = new Set(ids);
+      const snapshot = cloneSnapshot(state.project);
+
+      return {
+        project: {
+          ...state.project,
+          elements: state.project.elements.filter((el) => !idSet.has(el.id)),
+          joints: state.project.joints.filter(
+            (j) => !j.elementIds.some((elId) => idSet.has(elId))
+          ),
+          updatedAt: new Date().toISOString(),
+        },
+        selectedElementIds: state.selectedElementIds.filter((id) => !idSet.has(id)),
+        saveStatus: "unsaved",
+        historyPast: [...state.historyPast.slice(-49), snapshot],
+        historyFuture: [],
+      };
+    }),
+
+  duplicateElement: (id) => {
+    const state = get();
+    const source = state.project.elements.find((el) => el.id === id);
+    if (!source) return null;
+
+    const offsetMm = state.project.gridSettings.minorStepMm || 100;
+    const newId = `el-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const copy: ConstructionElement = {
+      ...source,
+      id: newId,
+      start: {
+        x: source.start.x + offsetMm,
+        y: source.start.y + offsetMm,
+        z: source.start.z,
+      },
+      end: {
+        x: source.end.x + offsetMm,
+        y: source.end.y + offsetMm,
+        z: source.end.z,
+      },
+      label: source.label ? `${source.label} (копия)` : undefined,
+      jointStartId: undefined,
+      jointEndId: undefined,
+    };
+
+    const snapshot = cloneSnapshot(state.project);
+    set({
+      project: {
+        ...state.project,
+        elements: [...state.project.elements, copy],
+        updatedAt: new Date().toISOString(),
+      },
+      selectedElementIds: [newId],
+      saveStatus: "unsaved",
+      historyPast: [...state.historyPast.slice(-49), snapshot],
+      historyFuture: [],
+    });
+
+    return newId;
+  },
+
+  addProfile: (profileInput) => {
+    const id = `prof-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const newProfile: MaterialProfile = { ...profileInput, id, isExample: false };
+    set((state) => ({
+      project: {
+        ...state.project,
+        profiles: [...state.project.profiles, newProfile],
+        updatedAt: new Date().toISOString(),
+      },
+      activeProfileId: id,
+      saveStatus: "unsaved",
+    }));
+    return id;
+  },
+
+  updateProfile: (id, patch) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        profiles: state.project.profiles.map((p) =>
+          p.id === id ? { ...p, ...patch, isExample: false } : p
+        ),
+        updatedAt: new Date().toISOString(),
+      },
+      saveStatus: "unsaved",
+    })),
+
+  deleteProfile: (id) => {
+    const state = get();
+    const isUsed = state.project.elements.some((el) => el.profileId === id);
+    if (isUsed) {
+      return {
+        ok: false,
+        reason: "Профиль используется в конструкции. Сначала замените профиль у элементов.",
+      };
+    }
+    if (state.project.profiles.length <= 1) {
+      return {
+        ok: false,
+        reason: "В каталоге должен оставаться хотя бы один профиль.",
+      };
+    }
+
+    const nextProfiles = state.project.profiles.filter((p) => p.id !== id);
+    set({
+      project: {
+        ...state.project,
+        profiles: nextProfiles,
+        updatedAt: new Date().toISOString(),
+      },
+      activeProfileId:
+        state.activeProfileId === id ? (nextProfiles[0]?.id ?? "") : state.activeProfileId,
+      saveStatus: "unsaved",
+    });
+    return { ok: true };
+  },
+
+  updateCalculationSettings: (patch) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        calculationSettings: { ...state.project.calculationSettings, ...patch },
+        updatedAt: new Date().toISOString(),
+      },
+      saveStatus: "unsaved",
+    })),
+
+  undo: () =>
+    set((state) => {
+      if (state.historyPast.length === 0) return state;
+      const previous = state.historyPast[state.historyPast.length - 1];
+      const currentSnapshot = cloneSnapshot(state.project);
+
+      return {
+        project: {
+          ...state.project,
+          elements: previous.elements,
+          joints: previous.joints,
+          updatedAt: new Date().toISOString(),
+        },
+        selectedElementIds: [],
+        saveStatus: "unsaved",
+        historyPast: state.historyPast.slice(0, -1),
+        historyFuture: [currentSnapshot, ...state.historyFuture.slice(0, 49)],
+      };
+    }),
+
+  redo: () =>
+    set((state) => {
+      if (state.historyFuture.length === 0) return state;
+      const next = state.historyFuture[0];
+      const currentSnapshot = cloneSnapshot(state.project);
+
+      return {
+        project: {
+          ...state.project,
+          elements: next.elements,
+          joints: next.joints,
+          updatedAt: new Date().toISOString(),
+        },
+        selectedElementIds: [],
+        saveStatus: "unsaved",
+        historyPast: [...state.historyPast.slice(-49), currentSnapshot],
+        historyFuture: state.historyFuture.slice(1),
+      };
+    }),
+
+  renameProject: (name) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        name: name.trim() || "Без названия",
+        isExample: false,
+        updatedAt: new Date().toISOString(),
+      },
+      saveStatus: "unsaved",
+    })),
+
+  createNewProject: (name = "Новый проект") => {
+    const nextProject = createEmptyProject(name);
+    set({
+      project: nextProject,
+      activeProfileId: nextProject.profiles[0]?.id ?? "",
+      selectedElementIds: [],
+      historyPast: [],
+      historyFuture: [],
+      saveStatus: "unsaved",
+      lastError: null,
+    });
+  },
+
+  loadExampleProject: () => {
+    const example = createExampleProject();
+    set({
+      project: example,
+      activeProfileId: example.profiles[2]?.id ?? example.profiles[0]?.id ?? "",
+      selectedElementIds: [],
+      historyPast: [],
+      historyFuture: [],
+      saveStatus: "saved",
+      lastError: null,
+    });
+  },
+
+  saveCurrentProject: () => {
+    const state = get();
+    try {
+      const projectsMap = readStoredProjects();
+      const updatedProject: MetalCalcProject = {
+        ...state.project,
+        updatedAt: new Date().toISOString(),
+      };
+      projectsMap[updatedProject.id] = updatedProject;
+      writeStoredProjects(projectsMap);
+      window.localStorage.setItem(STORAGE_KEY_ACTIVE_ID, updatedProject.id);
+      set({ project: updatedProject, saveStatus: "saved", lastError: null });
+      return true;
+    } catch {
+      set({
+        saveStatus: "error",
+        lastError: "Не удалось сохранить проект в локальное хранилище браузера.",
+      });
+      return false;
+    }
+  },
+
+  openProjectById: (id) => {
+    const projectsMap = readStoredProjects();
+    const found = projectsMap[id];
+    if (!found) return false;
+    window.localStorage.setItem(STORAGE_KEY_ACTIVE_ID, found.id);
+    set({
+      project: found,
+      activeProfileId: found.profiles[0]?.id ?? "",
+      selectedElementIds: [],
+      historyPast: [],
+      historyFuture: [],
+      saveStatus: "saved",
+      lastError: null,
+    });
+    return true;
+  },
+
+  duplicateCurrentProject: () => {
+    const state = get();
+    const now = new Date().toISOString();
+    const copy: MetalCalcProject = {
+      ...state.project,
+      id: `proj-${Date.now()}`,
+      name: `${state.project.name} (копия)`,
+      isExample: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const projectsMap = readStoredProjects();
+    projectsMap[copy.id] = copy;
+    writeStoredProjects(projectsMap);
+    window.localStorage.setItem(STORAGE_KEY_ACTIVE_ID, copy.id);
+    set({
+      project: copy,
+      selectedElementIds: [],
+      historyPast: [],
+      historyFuture: [],
+      saveStatus: "saved",
+    });
+  },
+
+  deleteSavedProject: (id) => {
+    const projectsMap = readStoredProjects();
+    delete projectsMap[id];
+    writeStoredProjects(projectsMap);
+    if (get().project.id === id) {
+      const remaining = Object.values(projectsMap);
+      if (remaining.length > 0) {
+        set({
+          project: remaining[0],
+          selectedElementIds: [],
+          historyPast: [],
+          historyFuture: [],
+          saveStatus: "saved",
+        });
+      } else {
+        get().createNewProject("Новый проект");
+      }
+    }
+  },
+
+  getSavedProjectSummaries: () => {
+    const projectsMap = readStoredProjects();
+    return Object.values(projectsMap)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        isExample: p.isExample,
+        elementCount: p.elements.length,
+        updatedAt: p.updatedAt,
+      }))
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  },
+
+  hydrateFromStorage: () => {
+    if (typeof window === "undefined") return;
+    const projectsMap = readStoredProjects();
+    const activeId = window.localStorage.getItem(STORAGE_KEY_ACTIVE_ID);
+
+    if (activeId && projectsMap[activeId]) {
+      const loaded = projectsMap[activeId];
+      set({
+        project: loaded,
+        activeProfileId: loaded.profiles[0]?.id ?? "",
+        saveStatus: "saved",
+      });
+      return;
+    }
+
+    // При самом первом запуске сохраняем демонстрационный пример в локальный список
+    if (Object.keys(projectsMap).length === 0) {
+      const example = createExampleProject();
+      projectsMap[example.id] = example;
+      writeStoredProjects(projectsMap);
+      window.localStorage.setItem(STORAGE_KEY_ACTIVE_ID, example.id);
+    }
+  },
+}));

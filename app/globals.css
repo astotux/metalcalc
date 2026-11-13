@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+:root {
+  --bg-app: #141619;
+  --bg-panel: #1b1e23;
+  --bg-panel-elevated: #22262d;
+  --bg-input: #121417;
+  --border-subtle: #2c313a;
+  --border-strong: #3c4350;
+  --text-primary: #e6e8ec;
+  --text-secondary: #9aa2b1;
+  --text-muted: #6c7484;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Тонкие скроллбары в стиле десктопного CAD */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #16181d;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #313640;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444b59;
+}
