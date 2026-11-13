@@ -1,7 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, FileSpreadsheet, Printer, X } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  Copy,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Loader2,
+  Printer,
+  X,
+} from "lucide-react";
+import { downloadProjectExcel, downloadProjectPdf } from "@/features/export/exportClient";
 import { calculateProjectEstimate, formatMoney } from "@/lib/calculations/estimate";
 import { useProjectStore } from "@/store/useProjectStore";
 
@@ -13,6 +24,8 @@ interface EstimateModalProps {
 export function EstimateModal({ open, onClose }: EstimateModalProps) {
   const project = useProjectStore((s) => s.project);
   const [copied, setCopied] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState<"pdf" | "excel" | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   if (!open) return null;
 
@@ -46,6 +59,34 @@ export function EstimateModal({ open, onClose }: EstimateModalProps) {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       setCopied(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    setExportError(null);
+    setExportingFormat("excel");
+    try {
+      await downloadProjectExcel(project);
+    } catch (error) {
+      setExportError(
+        error instanceof Error ? error.message : "Не удалось скачать Excel-файл"
+      );
+    } finally {
+      setExportingFormat(null);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    setExportError(null);
+    setExportingFormat("pdf");
+    try {
+      await downloadProjectPdf(project);
+    } catch (error) {
+      setExportError(
+        error instanceof Error ? error.message : "Не удалось скачать PDF-файл"
+      );
+    } finally {
+      setExportingFormat(null);
     }
   };
 
@@ -181,27 +222,66 @@ export function EstimateModal({ open, onClose }: EstimateModalProps) {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#2c313a] bg-[#16191e] px-4 py-3">
-          <span className="text-[11px] text-[#6c7484]">
-            Экспорт файлов в форматы PDF и Excel будет добавлен на этапе 7.
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleCopyText}
-              className="inline-flex items-center gap-1.5 rounded border border-[#343a46] bg-[#22262d] px-3 py-1.5 text-xs font-medium text-[#e6e8ec] hover:bg-[#2c313a]"
-            >
-              {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Скопировано" : "Копировать смету"}
-            </button>
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
-            >
-              <Printer className="h-3.5 w-3.5" />
-              Печать
-            </button>
+        <div className="flex flex-col gap-2 border-t border-[#2c313a] bg-[#16191e] px-4 py-3">
+          {exportError && (
+            <div className="flex items-center gap-2 rounded border border-rose-500/40 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-200">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-400" />
+              <span>{exportError}</span>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[11px] text-[#9aa2b1]">
+              Экспорт включает спецификацию, чертёж (PDF) и итоговую смету.
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCopyText}
+                className="inline-flex items-center gap-1.5 rounded border border-[#343a46] bg-[#22262d] px-3 py-1.5 text-xs font-medium text-[#e6e8ec] hover:bg-[#2c313a]"
+              >
+                {copied ? (
+                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
+                {copied ? "Скопировано" : "Копировать"}
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="inline-flex items-center gap-1.5 rounded border border-[#343a46] bg-[#22262d] px-3 py-1.5 text-xs font-medium text-[#e6e8ec] hover:bg-[#2c313a]"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                Печать
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleExportExcel()}
+                disabled={exportingFormat !== null}
+                className="inline-flex items-center gap-1.5 rounded border border-emerald-500/40 bg-emerald-600/20 px-3 py-1.5 text-xs font-medium text-emerald-200 hover:bg-emerald-600/30 disabled:opacity-60"
+              >
+                {exportingFormat === "excel" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}
+                Excel (.xlsx)
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleExportPdf()}
+                disabled={exportingFormat !== null}
+                className="inline-flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-60"
+              >
+                {exportingFormat === "pdf" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileText className="h-3.5 w-3.5" />
+                )}
+                PDF (.pdf)
+              </button>
+            </div>
           </div>
         </div>
       </div>

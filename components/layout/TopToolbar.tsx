@@ -6,14 +6,18 @@ import {
   Box,
   Download,
   FilePlus2,
+  FileSpreadsheet,
+  FileText,
   FolderOpen,
   Layers,
+  Loader2,
   Redo2,
   Save,
   Settings,
   Undo2,
 } from "lucide-react";
 import { EstimateModal } from "@/components/common/EstimateModal";
+import { downloadProjectExcel, downloadProjectPdf } from "@/features/export/exportClient";
 import { useProjectStore } from "@/store/useProjectStore";
 
 export function TopToolbar() {
@@ -32,6 +36,26 @@ export function TopToolbar() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(project.name);
   const [estimateOpen, setEstimateOpen] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState<"pdf" | "excel" | null>(null);
+
+  const handleQuickExport = async (format: "pdf" | "excel") => {
+    setExportingFormat(format);
+    try {
+      if (format === "pdf") {
+        await downloadProjectPdf(project);
+      } else {
+        await downloadProjectExcel(project);
+      }
+    } catch (error) {
+      useProjectStore.setState({
+        saveStatus: "error",
+        lastError:
+          error instanceof Error ? error.message : "Ошибка экспорта документа",
+      });
+    } finally {
+      setExportingFormat(null);
+    }
+  };
 
   const viewMode = project.displaySettings.viewMode;
 
@@ -216,6 +240,36 @@ export function TopToolbar() {
             <Settings className="h-3.5 w-3.5" />
             <span className="hidden md:inline">Настройки</span>
           </Link>
+
+          <button
+            type="button"
+            onClick={() => void handleQuickExport("excel")}
+            disabled={exportingFormat !== null}
+            className="hidden items-center gap-1 rounded border border-[#343a46] bg-[#1e2229] px-2 py-1.5 text-xs text-emerald-300 hover:bg-[#252a33] disabled:opacity-60 xl:inline-flex"
+            title="Скачать смету в Excel (.xlsx)"
+          >
+            {exportingFormat === "excel" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+            )}
+            <span>Excel</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleQuickExport("pdf")}
+            disabled={exportingFormat !== null}
+            className="hidden items-center gap-1 rounded border border-[#343a46] bg-[#1e2229] px-2 py-1.5 text-xs text-sky-300 hover:bg-[#252a33] disabled:opacity-60 xl:inline-flex"
+            title="Скачать чертёж и смету в PDF"
+          >
+            {exportingFormat === "pdf" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <FileText className="h-3.5 w-3.5" />
+            )}
+            <span>PDF</span>
+          </button>
 
           <button
             type="button"
