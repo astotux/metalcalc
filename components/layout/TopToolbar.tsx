@@ -132,16 +132,21 @@ export function TopToolbar() {
 
             <button
               type="button"
-              onClick={() => saveCurrentProject()}
-              className={`inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs transition-colors ${
+              onClick={() => void saveCurrentProject()}
+              disabled={saveStatus === "saving"}
+              className={`inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs transition-colors disabled:opacity-60 ${
                 saveStatus === "unsaved"
                   ? "bg-blue-600/20 text-blue-300 hover:bg-blue-600/30"
-                  : "text-[#c7cdd8] hover:bg-[#252a33] hover:text-white"
+                  : saveStatus === "error"
+                    ? "bg-rose-600/20 text-rose-300 hover:bg-rose-600/30"
+                    : "text-[#c7cdd8] hover:bg-[#252a33] hover:text-white"
               }`}
-              title="Сохранить проект"
+              title="Сохранить проект в SQLite"
             >
               <Save className="h-3.5 w-3.5" />
-              <span className="hidden lg:inline">Сохранить</span>
+              <span className="hidden lg:inline">
+                {saveStatus === "saving" ? "Сохранение..." : "Сохранить"}
+              </span>
             </button>
           </div>
         </div>

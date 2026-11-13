@@ -66,3 +66,71 @@ export const elementUpdateSchema = z.object({
   excludeFromPainting: z.boolean().optional(),
   label: z.string().max(80).optional(),
 });
+
+export const constructionElementSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal("beam"),
+  start: point3DSchema,
+  end: point3DSchema,
+  profileId: z.string().min(1),
+  color: z.string().optional(),
+  excludeFromPainting: z.boolean().optional(),
+  label: z.string().max(120).optional(),
+  groupId: z.string().optional(),
+  jointStartId: z.string().optional(),
+  jointEndId: z.string().optional(),
+});
+
+export const elementGroupSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  elementIds: z.array(z.string()),
+});
+
+export const jointConnectionSchema = z.object({
+  id: z.string().min(1),
+  type: z.enum(["miter_90", "miter_45", "t_joint", "lap", "butt"]),
+  elementIds: z.array(z.string()),
+  position: point3DSchema,
+  weldLengthMm: z.number().min(0).nullable(),
+  cutAngleDeg: z.number().min(0).max(180).optional(),
+  processingNotes: z.string().max(300).optional(),
+});
+
+export const gridSettingsSchema = z.object({
+  majorStepMm: z.number().positive(),
+  minorStepMm: z.number().positive(),
+  snapEnabled: z.boolean(),
+  snapToGrid: z.boolean(),
+  snapToEndpoints: z.boolean(),
+  snapToIntersections: z.boolean(),
+  snapToAngles: z.boolean(),
+  showGrid: z.boolean(),
+  showAxes: z.boolean(),
+  showDimensions: z.boolean(),
+});
+
+export const displaySettingsSchema = z.object({
+  viewMode: z.enum(["2d", "3d"]),
+  cameraPreset: z.enum(["isometric", "top", "front", "side"]),
+  zoomPercent: z.number().min(10).max(400),
+  panOffsetMm: z.object({ x: z.number().finite(), y: z.number().finite() }),
+  showJoints: z.boolean(),
+  showProfileColors: z.boolean(),
+});
+
+export const metalCalcProjectSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1, "Укажите название проекта").max(120),
+  description: z.string().max(500).optional(),
+  isExample: z.boolean(),
+  elements: z.array(constructionElementSchema),
+  groups: z.array(elementGroupSchema),
+  profiles: z.array(materialProfileSchema),
+  joints: z.array(jointConnectionSchema),
+  calculationSettings: calculationSettingsSchema,
+  gridSettings: gridSettingsSchema,
+  displaySettings: displaySettingsSchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});

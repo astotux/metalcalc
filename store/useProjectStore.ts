@@ -2,11 +2,21 @@
 
 import { create } from "zustand";
 import { createEmptyProject, createExampleProject } from "@/features/projects/defaults";
+import {
+  apiDeleteProject,
+  apiDuplicateProject,
+  apiGetProject,
+  apiListProjects,
+  apiRenameProject,
+  apiSaveProfileCatalog,
+  apiSaveProject,
+} from "@/features/projects/apiClient";
 import { loadSavedProfileCatalog, saveProfileCatalog } from "@/features/profiles/storage";
 import {
   detectProjectJoints,
   estimateJointPerimeterWeldMm,
 } from "@/features/joints/detectJoints";
+import type { DbProjectSummary } from "@/lib/db/projectsRepository";
 import { getElementLengthMm, resizeElementEndByLength, roundMm } from "@/lib/geometry/elements";
 import type {
   CalculationSettings,
@@ -24,7 +34,6 @@ import type {
   ViewMode,
 } from "@/types";
 
-const STORAGE_KEY_PROJECTS = "metalcalc_projects_v1";
 const STORAGE_KEY_ACTIVE_ID = "metalcalc_active_project_id_v1";
 
 interface HistorySnapshot {
@@ -33,16 +42,13 @@ interface HistorySnapshot {
   joints: JointConnection[];
 }
 
-export interface ProjectSummary {
-  id: string;
-  name: string;
-  isExample: boolean;
-  elementCount: number;
-  updatedAt: string;
-}
+export type ProjectSummary = DbProjectSummary;
 
 interface ProjectStoreState {
   project: MetalCalcProject;
+  savedProjects: DbProjectSummary[];
+  projectsLoading: boolean;
+  hasHydrated: boolean;
   activeTool: DrawingTool;
   activeProfileId: string;
   selectedElementIds: string[];
@@ -105,16 +111,18 @@ interface ProjectStoreState {
   undo: () => void;
   redo: () => void;
 
-  // Управление проектами (локальное хранилище до подключения Supabase)
+  // Управление проектами (SQLite через API-маршруты Next.js)
   renameProject: (name: string) => void;
   createNewProject: (name?: string) => void;
   loadExampleProject: () => void;
-  saveCurrentProject: () => boolean;
-  openProjectById: (id: string) => boolean;
-  duplicateCurrentProject: () => void;
-  deleteSavedProject: (id: string) => void;
-  getSavedProjectSummaries: () => ProjectSummary[];
-  hydrateFromStorage: () => void;
+  saveCurrentProject: () => Promise<boolean>;
+  openProjectById: (id: string) => Promise<boolean>;
+  duplicateCurrentProject: () => Promise<boolean>;
+  duplicateSavedProject: (id: string) => Promise<boolean>;
+  renameSavedProject: (id: string, name: string) => Promise<boolean>;
+  deleteSavedProject: (id: string) => Promise<boolean>;
+  fetchSavedProjects: () => Promise<DbProjectSummary[]>;
+  hydrateFromStorage: () => Promise<void>;
 }
 
 function cloneSnapshot(project: MetalCalcProject): HistorySnapshot {
@@ -153,27 +161,31 @@ function expandSelectionWithGroups(
   return Array.from(result);
 }
 
-function readStoredProjects(): Record<string, MetalCalcProject> {
-  if (typeof window === "undefined") return {};
+function saveActiveProjectId(id: string): void {
+  if (typeof window === "undefined") return;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY_PROJECTS);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as Record<string, MetalCalcProject>;
-    return parsed && typeof parsed === "object" ? parsed : {};
+    window.localStorage.setItem(STORAGE_KEY_ACTIVE_ID, id);
   } catch {
-    return {};
+    // Игнорируем ограничения доступа к localStorage
   }
 }
 
-function writeStoredProjects(projectsMap: Record<string, MetalCalcProject>): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(projectsMap));
+function readActiveProjectId(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(STORAGE_KEY_ACTIVE_ID);
+  } catch {
+    return null;
+  }
 }
 
 const initialProject = createExampleProject();
 
 export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   project: initialProject,
+  savedProjects: [],
+  projectsLoading: false,
+  hasHydrated: false,
   activeTool: "select",
   activeProfileId: initialProject.profiles[2]?.id ?? initialProject.profiles[0]?.id ?? "",
   selectedElementIds: [],
@@ -766,7 +778,12 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     }),
 
   saveCatalogAsDefault: () => {
-    return saveProfileCatalog(get().project.profiles);
+    const profiles = get().project.profiles;
+    const ok = saveProfileCatalog(profiles);
+    if (typeof window !== "undefined") {
+      void apiSaveProfileCatalog(profiles).catch(() => {});
+    }
+    return ok;
   },
 
   detectAndSyncJoints: () => {
@@ -945,6 +962,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       project: nextProject,
       activeProfileId: nextProject.profiles[0]?.id ?? "",
       selectedElementIds: [],
+      selectedJointId: null,
       historyPast: [],
       historyFuture: [],
       saveStatus: "unsaved",
@@ -958,130 +976,235 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       project: example,
       activeProfileId: example.profiles[2]?.id ?? example.profiles[0]?.id ?? "",
       selectedElementIds: [],
+      selectedJointId: null,
       historyPast: [],
       historyFuture: [],
-      saveStatus: "saved",
+      saveStatus: "unsaved",
       lastError: null,
     });
   },
 
-  saveCurrentProject: () => {
-    const state = get();
+  fetchSavedProjects: async () => {
+    set({ projectsLoading: true });
     try {
-      const projectsMap = readStoredProjects();
-      const updatedProject: MetalCalcProject = {
+      const savedProjects = await apiListProjects();
+      set({ savedProjects, projectsLoading: false, lastError: null });
+      return savedProjects;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Не удалось загрузить проекты из SQLite.";
+      set({ projectsLoading: false, lastError: message });
+      return get().savedProjects;
+    }
+  },
+
+  saveCurrentProject: async () => {
+    const state = get();
+    set({ saveStatus: "saving", lastError: null });
+    try {
+      const payload: MetalCalcProject = {
         ...state.project,
         updatedAt: new Date().toISOString(),
       };
-      projectsMap[updatedProject.id] = updatedProject;
-      writeStoredProjects(projectsMap);
-      window.localStorage.setItem(STORAGE_KEY_ACTIVE_ID, updatedProject.id);
-      set({ project: updatedProject, saveStatus: "saved", lastError: null });
+      const saved = await apiSaveProject(payload);
+      saveActiveProjectId(saved.id);
+      const savedProjects = await apiListProjects().catch(() => state.savedProjects);
+      set({
+        project: saved,
+        savedProjects,
+        hasHydrated: true,
+        saveStatus: "saved",
+        lastError: null,
+      });
       return true;
-    } catch {
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Не удалось сохранить проект в SQLite.";
       set({
         saveStatus: "error",
-        lastError: "Не удалось сохранить проект в локальное хранилище браузера.",
+        lastError: message,
       });
       return false;
     }
   },
 
-  openProjectById: (id) => {
-    const projectsMap = readStoredProjects();
-    const found = projectsMap[id];
-    if (!found) return false;
-    window.localStorage.setItem(STORAGE_KEY_ACTIVE_ID, found.id);
-    set({
-      project: found,
-      activeProfileId: found.profiles[0]?.id ?? "",
-      selectedElementIds: [],
-      historyPast: [],
-      historyFuture: [],
-      saveStatus: "saved",
-      lastError: null,
-    });
-    return true;
-  },
-
-  duplicateCurrentProject: () => {
-    const state = get();
-    const now = new Date().toISOString();
-    const copy: MetalCalcProject = {
-      ...state.project,
-      id: `proj-${Date.now()}`,
-      name: `${state.project.name} (копия)`,
-      isExample: false,
-      createdAt: now,
-      updatedAt: now,
-    };
-    const projectsMap = readStoredProjects();
-    projectsMap[copy.id] = copy;
-    writeStoredProjects(projectsMap);
-    window.localStorage.setItem(STORAGE_KEY_ACTIVE_ID, copy.id);
-    set({
-      project: copy,
-      selectedElementIds: [],
-      historyPast: [],
-      historyFuture: [],
-      saveStatus: "saved",
-    });
-  },
-
-  deleteSavedProject: (id) => {
-    const projectsMap = readStoredProjects();
-    delete projectsMap[id];
-    writeStoredProjects(projectsMap);
-    if (get().project.id === id) {
-      const remaining = Object.values(projectsMap);
-      if (remaining.length > 0) {
-        set({
-          project: remaining[0],
-          selectedElementIds: [],
-          historyPast: [],
-          historyFuture: [],
-          saveStatus: "saved",
-        });
-      } else {
-        get().createNewProject("Новый проект");
-      }
-    }
-  },
-
-  getSavedProjectSummaries: () => {
-    const projectsMap = readStoredProjects();
-    return Object.values(projectsMap)
-      .map((p) => ({
-        id: p.id,
-        name: p.name,
-        isExample: p.isExample,
-        elementCount: p.elements.length,
-        updatedAt: p.updatedAt,
-      }))
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  },
-
-  hydrateFromStorage: () => {
-    if (typeof window === "undefined") return;
-    const projectsMap = readStoredProjects();
-    const activeId = window.localStorage.getItem(STORAGE_KEY_ACTIVE_ID);
-
-    if (activeId && projectsMap[activeId]) {
-      const loaded = projectsMap[activeId];
+  openProjectById: async (id) => {
+    set({ projectsLoading: true, lastError: null });
+    try {
+      const found = await apiGetProject(id);
+      saveActiveProjectId(found.id);
       set({
-        project: loaded,
-        activeProfileId: loaded.profiles[0]?.id ?? "",
+        project: found,
+        activeProfileId: found.profiles[0]?.id ?? "",
+        selectedElementIds: [],
+        selectedJointId: null,
+        historyPast: [],
+        historyFuture: [],
+        hasHydrated: true,
+        projectsLoading: false,
         saveStatus: "saved",
+        lastError: null,
       });
-      return;
+      return true;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Не удалось открыть проект из SQLite.";
+      set({ projectsLoading: false, lastError: message });
+      return false;
     }
+  },
 
-    // При самом первом запуске сохраняем демонстрационный пример в локальный список
-    if (Object.keys(projectsMap).length === 0) {
-      const example = createExampleProject();
-      projectsMap[example.id] = example;
-      writeStoredProjects(projectsMap);
-      window.localStorage.setItem(STORAGE_KEY_ACTIVE_ID, example.id);
+  duplicateCurrentProject: async () => {
+    const state = get();
+    set({ saveStatus: "saving", lastError: null });
+    try {
+      const now = new Date().toISOString();
+      const copy: MetalCalcProject = {
+        ...state.project,
+        id: `proj-${Date.now()}`,
+        name: `${state.project.name} (копия)`,
+        isExample: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+      const savedCopy = await apiSaveProject(copy);
+      saveActiveProjectId(savedCopy.id);
+      const savedProjects = await apiListProjects().catch(() => state.savedProjects);
+      set({
+        project: savedCopy,
+        savedProjects,
+        selectedElementIds: [],
+        selectedJointId: null,
+        historyPast: [],
+        historyFuture: [],
+        hasHydrated: true,
+        saveStatus: "saved",
+        lastError: null,
+      });
+      return true;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Не удалось дублировать проект в SQLite.";
+      set({ saveStatus: "error", lastError: message });
+      return false;
+    }
+  },
+
+  duplicateSavedProject: async (id) => {
+    set({ projectsLoading: true, lastError: null });
+    try {
+      await apiDuplicateProject(id);
+      const savedProjects = await apiListProjects();
+      set({ savedProjects, projectsLoading: false, lastError: null });
+      return true;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Не удалось создать копию проекта.";
+      set({ projectsLoading: false, lastError: message });
+      return false;
+    }
+  },
+
+  renameSavedProject: async (id, name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return false;
+    set({ projectsLoading: true, lastError: null });
+    try {
+      const updated = await apiRenameProject(id, trimmed);
+      const savedProjects = await apiListProjects();
+      set((state) => ({
+        savedProjects,
+        projectsLoading: false,
+        lastError: null,
+        project: state.project.id === id ? updated : state.project,
+      }));
+      return true;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Не удалось переименовать проект.";
+      set({ projectsLoading: false, lastError: message });
+      return false;
+    }
+  },
+
+  deleteSavedProject: async (id) => {
+    set({ projectsLoading: true, lastError: null });
+    try {
+      await apiDeleteProject(id);
+      const savedProjects = await apiListProjects();
+      if (get().project.id === id) {
+        if (savedProjects.length > 0) {
+          const nextLoaded = await apiGetProject(savedProjects[0].id);
+          saveActiveProjectId(nextLoaded.id);
+          set({
+            project: nextLoaded,
+            activeProfileId: nextLoaded.profiles[0]?.id ?? "",
+            savedProjects,
+            selectedElementIds: [],
+            selectedJointId: null,
+            historyPast: [],
+            historyFuture: [],
+            projectsLoading: false,
+            saveStatus: "saved",
+            lastError: null,
+          });
+        } else {
+          set({ savedProjects, projectsLoading: false });
+          get().createNewProject("Новый проект");
+        }
+      } else {
+        set({ savedProjects, projectsLoading: false, lastError: null });
+      }
+      return true;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Не удалось удалить проект.";
+      set({ projectsLoading: false, lastError: message });
+      return false;
+    }
+  },
+
+  hydrateFromStorage: async () => {
+    if (typeof window === "undefined") return;
+    set({ projectsLoading: true });
+    try {
+      const summaries = await apiListProjects();
+      const currentState = get();
+
+      if (currentState.hasHydrated || currentState.saveStatus === "unsaved") {
+        set({ savedProjects: summaries, projectsLoading: false });
+        return;
+      }
+
+      const activeId = readActiveProjectId();
+      const targetId =
+        (activeId && summaries.some((p) => p.id === activeId) ? activeId : summaries[0]?.id) ??
+        null;
+
+      if (targetId) {
+        const loaded = await apiGetProject(targetId);
+        saveActiveProjectId(loaded.id);
+        set({
+          project: loaded,
+          activeProfileId: loaded.profiles[2]?.id ?? loaded.profiles[0]?.id ?? "",
+          savedProjects: summaries,
+          hasHydrated: true,
+          projectsLoading: false,
+          saveStatus: "saved",
+          lastError: null,
+        });
+        return;
+      }
+
+      set({
+        savedProjects: summaries,
+        hasHydrated: true,
+        projectsLoading: false,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Не удалось загрузить проекты из SQLite.";
+      set({ projectsLoading: false, lastError: message });
     }
   },
 }));

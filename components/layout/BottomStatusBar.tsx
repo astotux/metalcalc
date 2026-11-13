@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Loader2 } from "lucide-react";
 import { calculateProjectEstimate, formatMoney } from "@/lib/calculations/estimate";
 import { useProjectStore } from "@/store/useProjectStore";
 
@@ -48,10 +48,16 @@ export function BottomStatusBar() {
         </span>
 
         <div className="flex items-center gap-1.5">
+          {saveStatus === "saving" && (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-400" />
+              <span className="text-blue-300">Сохранение...</span>
+            </>
+          )}
           {saveStatus === "saved" && (
             <>
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-              <span className="text-emerald-300">Сохранено</span>
+              <span className="text-emerald-300">Сохранено (SQLite)</span>
             </>
           )}
           {saveStatus === "unsaved" && (
@@ -63,7 +69,9 @@ export function BottomStatusBar() {
           {saveStatus === "error" && (
             <>
               <AlertCircle className="h-3.5 w-3.5 text-rose-400" />
-              <span className="text-rose-300">{lastError ?? "Ошибка сохранения"}</span>
+              <span className="max-w-[260px] truncate text-rose-300" title={lastError ?? undefined}>
+                {lastError ?? "Ошибка сохранения"}
+              </span>
             </>
           )}
         </div>

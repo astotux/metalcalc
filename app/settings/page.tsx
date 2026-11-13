@@ -8,6 +8,7 @@ import type { CurrencyCode, WeldPricingMode } from "@/types";
 
 export default function SettingsPage() {
   const project = useProjectStore((s) => s.project);
+  const saveStatus = useProjectStore((s) => s.saveStatus);
   const updateCalculationSettings = useProjectStore((s) => s.updateCalculationSettings);
   const updateGridSettings = useProjectStore((s) => s.updateGridSettings);
   const saveCurrentProject = useProjectStore((s) => s.saveCurrentProject);
@@ -27,11 +28,12 @@ export default function SettingsPage() {
         </div>
         <button
           type="button"
-          onClick={() => saveCurrentProject()}
-          className="inline-flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
+          onClick={() => void saveCurrentProject()}
+          disabled={saveStatus === "saving"}
+          className="inline-flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-60"
         >
           <Check className="h-3.5 w-3.5" />
-          Сохранить проект
+          {saveStatus === "saving" ? "Сохранение..." : "Сохранить проект"}
         </button>
       </header>
 
