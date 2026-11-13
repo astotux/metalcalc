@@ -54,25 +54,31 @@ function normalizeHexColor(color: string | undefined, fallback = "#2563eb"): str
   return /^#[0-9a-fA-F]{6}$/.test(color) ? color : fallback;
 }
 
-function projectPoint(x: number, y: number, z: number): { u: number; v: number } {
-  return {
-    u: x + z * 0.35,
-    v: y - z * 0.35,
-  };
+type PdfOrthoPlane = "xy" | "xz" | "yz";
+
+function projectToPdfPlane(
+  x: number,
+  y: number,
+  z: number,
+  plane: PdfOrthoPlane
+): { u: number; vScreen: number } {
+  if (plane === "xz") {
+    return { u: x, vScreen: -z };
+  }
+  if (plane === "yz") {
+    return { u: y, vScreen: -z };
+  }
+  return { u: x, vScreen: y };
 }
 
-function buildVectorDrawingBlock(
+function buildProjectionCanvas(
   project: MetalCalcProject,
-  data: ProjectExportData
+  profileMap: Map<string, MaterialProfile>,
+  plane: PdfOrthoPlane,
+  canvasWidth: number,
+  canvasHeight: number
 ): Record<string, unknown>[] {
-  const canvasWidth = 515;
-  const canvasHeight = 165;
-  const padding = 20;
-
-  const profileMap = new Map<string, MaterialProfile>();
-  for (const profile of project.profiles) {
-    profileMap.set(profile.id, profile);
-  }
+  const padding = plane === "xy" ? 18 : 14;
 
   const canvasItems: Record<string, unknown>[] = [
     {
@@ -81,15 +87,15 @@ function buildVectorDrawingBlock(
       y: 0,
       w: canvasWidth,
       h: canvasHeight,
-      r: 4,
+      r: 3,
       color: "#f8fafc",
       lineColor: "#cbd5e1",
-      lineWidth: 1,
+      lineWidth: 0.9,
     },
   ];
 
   // Лёгкая вспомогательная сетка чертежа
-  const gridStep = 25;
+  const gridStep = plane === "xy" ? 24 : 20;
   for (let gx = gridStep; gx < canvasWidth; gx += gridStep) {
     canvasItems.push({
       type: "line",
@@ -97,7 +103,7 @@ function buildVectorDrawingBlock(
       y1: 0,
       x2: gx,
       y2: canvasHeight,
-      lineWidth: 0.4,
+      lineWidth: 0.35,
       lineColor: "#e2e8f0",
     });
   }
@@ -108,56 +114,77 @@ function buildVectorDrawingBlock(
       y1: gy,
       x2: canvasWidth,
       y2: gy,
-      lineWidth: 0.4,
+      lineWidth: 0.35,
       lineColor: "#e2e8f0",
     });
   }
 
-  if (project.elements.length > 0) {
-    let minU = Infinity;
-    let maxU = -Infinity;
-    let minV = Infinity;
-    let maxV = -Infinity;
+  if (project.elements.length === 0) {
+    return canvasItems;
+  }
 
-    for (const el of project.elements) {
-      const p1 = projectPoint(el.start.x, el.start.y, el.start.z);
-      const p2 = projectPoint(el.end.x, el.end.y, el.end.z);
-      minU = Math.min(minU, p1.u, p2.u);
-      maxU = Math.max(maxU, p1.u, p2.u);
-      minV = Math.min(minV, p1.v, p2.v);
-      maxV = Math.max(maxV, p1.v, p2.v);
-    }
+  let minU = Infinity;
+  let maxU = -Infinity;
+  let minV = Infinity;
+  let maxV = -Infinity;
 
-    const spanU = Math.max(maxU - minU, 1);
-    const spanV = Math.max(maxV - minV, 1);
-    const drawableW = canvasWidth - padding * 2;
-    const drawableH = canvasHeight - padding * 2;
-    const scale = Math.min(drawableW / spanU, drawableH / spanV);
+  for (const el of project.elements) {
+    const p1 = projectToPdfPlane(el.start.x, el.start.y, el.start.z, plane);
+    const p2 = projectToPdfPlane(el.end.x, el.end.y, el.end.z, plane);
+    minU = Math.min(minU, p1.u, p2.u);
+    maxU = Math.max(maxU, p1.u, p2.u);
+    minV = Math.min(minV, p1.vScreen, p2.vScreen);
+    maxV = Math.max(maxV, p1.vScreen, p2.vScreen);
+  }
 
-    const offsetX = padding + (drawableW - spanU * scale) / 2 - minU * scale;
-    const offsetY = padding + (drawableH - spanV * scale) / 2 - minV * scale;
+  const rawSpanU = maxU - minU;
+  const rawSpanV = maxV - minV;
+  const spanU = Math.max(rawSpanU, 200);
+  const spanV = Math.max(rawSpanV, 200);
+  const drawableW = canvasWidth - padding * 2;
+  const drawableH = canvasHeight - padding * 2;
+  const scale = Math.min(drawableW / spanU, drawableH / spanV);
 
-    const toPdfX = (u: number) => Math.round((offsetX + u * scale) * 100) / 100;
-    const toPdfY = (v: number) => Math.round((offsetY + v * scale) * 100) / 100;
+  const centerU = (minU + maxU) / 2;
+  const centerV = (minV + maxV) / 2;
+  const toPdfX = (u: number) =>
+    Math.round((canvasWidth / 2 + (u - centerU) * scale) * 100) / 100;
+  const toPdfY = (v: number) =>
+    Math.round((canvasHeight / 2 + (v - centerV) * scale) * 100) / 100;
 
-    for (const el of project.elements) {
-      const p1 = projectPoint(el.start.x, el.start.y, el.start.z);
-      const p2 = projectPoint(el.end.x, el.end.y, el.end.z);
-      const x1 = toPdfX(p1.u);
-      const y1 = toPdfY(p1.v);
-      const x2 = toPdfX(p2.u);
-      const y2 = toPdfY(p2.v);
-      const profile = profileMap.get(el.profileId);
-      const beamColor = normalizeHexColor(el.color ?? profile?.color, "#2563eb");
+  const lineOutlineWidth = plane === "xy" ? 4.0 : 3.4;
+  const lineCoreWidth = plane === "xy" ? 2.4 : 2.0;
 
-      // Контур стержня + цветной сердечник профиля
+  for (const el of project.elements) {
+    const p1 = projectToPdfPlane(el.start.x, el.start.y, el.start.z, plane);
+    const p2 = projectToPdfPlane(el.end.x, el.end.y, el.end.z, plane);
+    const x1 = toPdfX(p1.u);
+    const y1 = toPdfY(p1.vScreen);
+    const x2 = toPdfX(p2.u);
+    const y2 = toPdfY(p2.vScreen);
+    const profile = profileMap.get(el.profileId);
+    const beamColor = normalizeHexColor(el.color ?? profile?.color, "#2563eb");
+
+    if (Math.hypot(x2 - x1, y2 - y1) < 1.2) {
+      // Перпендикулярная плоскости труба (например, вертикальная стойка на виде сверху XY)
+      canvasItems.push({
+        type: "ellipse",
+        x: x1,
+        y: y1,
+        r1: 2.6,
+        r2: 2.6,
+        color: beamColor,
+        lineColor: "#1e293b",
+        lineWidth: 0.9,
+      });
+    } else {
       canvasItems.push({
         type: "line",
         x1,
         y1,
         x2,
         y2,
-        lineWidth: 4.2,
+        lineWidth: lineOutlineWidth,
         lineColor: "#1e293b",
         lineCap: "round",
       });
@@ -167,34 +194,52 @@ function buildVectorDrawingBlock(
         y1,
         x2,
         y2,
-        lineWidth: 2.6,
+        lineWidth: lineCoreWidth,
         lineColor: beamColor,
         lineCap: "round",
       });
     }
+  }
 
-    // Точки сварных соединений на чертеже
-    for (const joint of project.joints) {
-      const jp = projectPoint(joint.position.x, joint.position.y, joint.position.z);
-      canvasItems.push({
-        type: "ellipse",
-        x: toPdfX(jp.u),
-        y: toPdfY(jp.v),
-        r1: 2.8,
-        r2: 2.8,
-        color: "#f59e0b",
-        lineColor: "#78350f",
-        lineWidth: 0.7,
-      });
-    }
+  for (const joint of project.joints) {
+    const jp = projectToPdfPlane(
+      joint.position.x,
+      joint.position.y,
+      joint.position.z,
+      plane
+    );
+    canvasItems.push({
+      type: "ellipse",
+      x: toPdfX(jp.u),
+      y: toPdfY(jp.vScreen),
+      r1: plane === "xy" ? 2.6 : 2.1,
+      r2: plane === "xy" ? 2.6 : 2.1,
+      color: "#f59e0b",
+      lineColor: "#78350f",
+      lineWidth: 0.6,
+    });
+  }
+
+  return canvasItems;
+}
+
+function buildVectorDrawingBlock(
+  project: MetalCalcProject,
+  data: ProjectExportData
+): Record<string, unknown>[] {
+  const profileMap = new Map<string, MaterialProfile>();
+  for (const profile of project.profiles) {
+    profileMap.set(profile.id, profile);
   }
 
   const { boundsMm } = data;
+  const xyCanvas = buildProjectionCanvas(project, profileMap, "xy", 315, 198);
+  const xzCanvas = buildProjectionCanvas(project, profileMap, "xz", 192, 91);
+  const yzCanvas = buildProjectionCanvas(project, profileMap, "yz", 192, 91);
+
   const dimensionSummary =
     project.elements.length > 0
-      ? `Габариты: ширина ${boundsMm.widthMm} мм × высота ${boundsMm.heightMm} мм${
-          boundsMm.depthMm > 0 ? ` × глубина ${boundsMm.depthMm} мм` : ""
-        } · Соединений (оранжевые маркеры): ${project.joints.length}`
+      ? `Габариты конструкции: X (ширина) ${boundsMm.widthMm} мм × Y (глубина) ${boundsMm.heightMm} мм × Z (высота) ${boundsMm.depthMm} мм · Узлов сварки: ${project.joints.length}`
       : "Чертёж пуст — в проекте пока нет конструктивных элементов.";
 
   const legendColumns = data.materialRows.map((item) => ({
@@ -226,8 +271,47 @@ function buildVectorDrawingBlock(
   }));
 
   return [
-    { text: "Чертёж конструкции", style: "sectionTitle" },
-    { canvas: canvasItems, margin: [0, 0, 0, 4] },
+    { text: "Чертёж конструкции (3 проекции)", style: "sectionTitle" },
+    {
+      columns: [
+        {
+          width: 315,
+          stack: [
+            {
+              text: `Главный вид · Сверху (XY): ${boundsMm.widthMm} × ${boundsMm.heightMm} мм`,
+              fontSize: 7.5,
+              bold: true,
+              color: "#334155",
+              margin: [0, 0, 0, 2],
+            },
+            { canvas: xyCanvas },
+          ],
+        },
+        {
+          width: 192,
+          stack: [
+            {
+              text: `Вид спереди (XZ): ${boundsMm.widthMm} × ${boundsMm.depthMm} мм`,
+              fontSize: 7.5,
+              bold: true,
+              color: "#334155",
+              margin: [0, 0, 0, 2],
+            },
+            { canvas: xzCanvas, margin: [0, 0, 0, 5] },
+            {
+              text: `Вид сбоку (YZ): ${boundsMm.heightMm} × ${boundsMm.depthMm} мм`,
+              fontSize: 7.5,
+              bold: true,
+              color: "#334155",
+              margin: [0, 0, 0, 2],
+            },
+            { canvas: yzCanvas },
+          ],
+        },
+      ],
+      columnGap: 8,
+      margin: [0, 0, 0, 4],
+    },
     { text: dimensionSummary, fontSize: 8.5, color: "#475569", margin: [0, 0, 0, 4] },
     ...(legendColumns.length > 0
       ? [{ columns: legendColumns, columnGap: 6, margin: [0, 0, 0, 10] }]

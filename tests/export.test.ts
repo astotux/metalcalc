@@ -74,4 +74,33 @@ describe("Export module (Excel & PDF)", () => {
     expect(emptyPdf.subarray(0, 5).toString("ascii")).toBe("%PDF-");
     expect(emptyPdf.length).toBeGreaterThan(1000);
   });
+
+  it("generates valid 3-projection PDF for 3D multi-axis structure with height and braces", async () => {
+    const project3D = createExampleProject();
+    project3D.elements.push(
+      {
+        id: "leg-3d-1",
+        type: "beam",
+        start: { x: 0, y: 0, z: 0 },
+        end: { x: 0, y: 0, z: 2000 },
+        profileId: project3D.profiles[0].id,
+      },
+      {
+        id: "brace-3d-1",
+        type: "beam",
+        start: { x: 0, y: 0, z: 2000 },
+        end: { x: 1200, y: 600, z: 0 },
+        profileId: project3D.profiles[0].id,
+      }
+    );
+
+    const data = buildProjectExportData(project3D);
+    expect(data.boundsMm.widthMm).toBe(1200);
+    expect(data.boundsMm.heightMm).toBe(600);
+    expect(data.boundsMm.depthMm).toBe(2000);
+
+    const pdf3d = await generatePdfBuffer(project3D);
+    expect(pdf3d.subarray(0, 5).toString("ascii")).toBe("%PDF-");
+    expect(pdf3d.length).toBeGreaterThan(2000);
+  });
 });

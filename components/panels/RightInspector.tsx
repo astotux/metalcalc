@@ -16,12 +16,14 @@ interface SelectedElementInspectorProps {
 function SelectedElementInspector({ selectedElement }: SelectedElementInspectorProps) {
   const project = useProjectStore((s) => s.project);
   const updateElement = useProjectStore((s) => s.updateElement);
+  const moveElements = useProjectStore((s) => s.moveElements);
   const resizeElementLength = useProjectStore((s) => s.resizeElementLength);
   const deleteElements = useProjectStore((s) => s.deleteElements);
   const duplicateElement = useProjectStore((s) => s.duplicateElement);
 
   const lengthMm = roundMm(getElementLengthMm(selectedElement));
   const [lengthInput, setLengthInput] = useState(String(lengthMm));
+  const nudgeStep = project.gridSettings.minorStepMm || 100;
 
   const profile = project.profiles.find((p) => p.id === selectedElement.profileId);
   const elementCost = profile
@@ -108,8 +110,14 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
         <div>
           <div className="mb-1 text-[11px] text-[#9aa2b1]">Координаты начала (мм)</div>
           <div className="grid grid-cols-3 gap-1.5">
-            {(["x", "y", "z"] as const).map((axis) => (
-              <label key={axis} className="text-[10px] uppercase text-[#6c7484]">
+            {(
+              [
+                { axis: "x", color: "text-red-400" },
+                { axis: "y", color: "text-emerald-400" },
+                { axis: "z", color: "text-blue-400" },
+              ] as const
+            ).map(({ axis, color }) => (
+              <label key={axis} className={`text-[10px] uppercase font-medium ${color}`}>
                 {axis}
                 <input
                   type="number"
@@ -126,8 +134,14 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
         <div>
           <div className="mb-1 text-[11px] text-[#9aa2b1]">Координаты конца (мм)</div>
           <div className="grid grid-cols-3 gap-1.5">
-            {(["x", "y", "z"] as const).map((axis) => (
-              <label key={axis} className="text-[10px] uppercase text-[#6c7484]">
+            {(
+              [
+                { axis: "x", color: "text-red-400" },
+                { axis: "y", color: "text-emerald-400" },
+                { axis: "z", color: "text-blue-400" },
+              ] as const
+            ).map(({ axis, color }) => (
+              <label key={axis} className={`text-[10px] uppercase font-medium ${color}`}>
                 {axis}
                 <input
                   type="number"
@@ -136,6 +150,58 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
                   className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-2 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
                 />
               </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Быстрый сдвиг по осям X / Y / Z */}
+        <div>
+          <div className="mb-1 flex items-center justify-between text-[11px] text-[#9aa2b1]">
+            <span>Сдвиг по осям</span>
+            <span className="text-[10px] tabular-nums text-[#6c7484]">шаг {nudgeStep} мм</span>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {(
+              [
+                { axis: "x", label: "X", color: "text-red-300" },
+                { axis: "y", label: "Y", color: "text-emerald-300" },
+                { axis: "z", label: "Z", color: "text-blue-300" },
+              ] as const
+            ).map(({ axis, label, color }) => (
+              <div
+                key={axis}
+                className="flex items-center justify-between rounded border border-[#2c313a] bg-[#121417] px-1 py-0.5 text-[11px]"
+              >
+                <button
+                  type="button"
+                  onClick={() =>
+                    moveElements([selectedElement.id], {
+                      x: axis === "x" ? -nudgeStep : 0,
+                      y: axis === "y" ? -nudgeStep : 0,
+                      z: axis === "z" ? -nudgeStep : 0,
+                    })
+                  }
+                  className="rounded px-1.5 py-0.5 text-[#9aa2b1] hover:bg-[#22262d] hover:text-white"
+                  title={`Сдвинуть на -${nudgeStep} мм по ${label}`}
+                >
+                  −
+                </button>
+                <span className={`font-semibold ${color}`}>{label}</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    moveElements([selectedElement.id], {
+                      x: axis === "x" ? nudgeStep : 0,
+                      y: axis === "y" ? nudgeStep : 0,
+                      z: axis === "z" ? nudgeStep : 0,
+                    })
+                  }
+                  className="rounded px-1.5 py-0.5 text-[#9aa2b1] hover:bg-[#22262d] hover:text-white"
+                  title={`Сдвинуть на +${nudgeStep} мм по ${label}`}
+                >
+                  +
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -235,6 +301,162 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
   );
 }
 
+interface MultiSelectionInspectorProps {
+  selectedElementIds: string[];
+}
+
+function MultiSelectionInspector({ selectedElementIds }: MultiSelectionInspectorProps) {
+  const project = useProjectStore((s) => s.project);
+  const assignProfileToElements = useProjectStore((s) => s.assignProfileToElements);
+  const groupSelectedElements = useProjectStore((s) => s.groupSelectedElements);
+  const ungroupSelectedElements = useProjectStore((s) => s.ungroupSelectedElements);
+  const moveElements = useProjectStore((s) => s.moveElements);
+  const copyElements = useProjectStore((s) => s.copyElements);
+  const deleteElements = useProjectStore((s) => s.deleteElements);
+
+  const defaultStep = project.gridSettings.minorStepMm || 100;
+  const [deltaX, setDeltaX] = useState("0");
+  const [deltaY, setDeltaY] = useState("0");
+  const [deltaZ, setDeltaZ] = useState(String(defaultStep));
+
+  const selectedElements = project.elements.filter((el) =>
+    selectedElementIds.includes(el.id)
+  );
+  const totalSelectedMeters = selectedElements.reduce(
+    (sum, el) => sum + mmToMeters(getElementLengthMm(el)),
+    0
+  );
+  const hasGrouped = selectedElements.some((el) => Boolean(el.groupId));
+
+  const parsedDelta = () => ({
+    x: Number(deltaX) || 0,
+    y: Number(deltaY) || 0,
+    z: Number(deltaZ) || 0,
+  });
+
+  return (
+    <aside className="flex w-80 shrink-0 flex-col border-l border-[#2c313a] bg-[#181b20] p-3 space-y-3 overflow-y-auto">
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#9aa2b1]">
+          Выбрано элементов: {selectedElementIds.length}
+        </div>
+        <div className="mt-1 text-xs text-[#9aa2b1]">
+          Суммарная длина:{" "}
+          <strong className="tabular-nums text-[#e6e8ec]">
+            {totalSelectedMeters.toFixed(2)} м
+          </strong>
+        </div>
+      </div>
+
+      <label className="block text-[11px] text-[#9aa2b1]">
+        Назначить профиль всем выбранным
+        <select
+          defaultValue=""
+          onChange={(e) => {
+            if (e.target.value) {
+              assignProfileToElements(selectedElementIds, e.target.value);
+              e.target.value = "";
+            }
+          }}
+          className="mt-1 w-full rounded border border-[#2c313a] bg-[#121417] px-2 py-1.5 text-xs text-white outline-none focus:border-blue-500"
+        >
+          <option value="" disabled>
+            Выберите профиль...
+          </option>
+          {project.profiles.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name} ({formatMoney(p.pricePerMeter, project.calculationSettings.currency)}/м)
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {/* Сдвиг или копирование группы по осям X / Y / Z */}
+      <div className="rounded border border-[#2c313a] bg-[#141619] p-2.5 space-y-2">
+        <div className="text-[11px] font-medium text-[#c7cdd8]">
+          Сдвиг / копия по осям (мм)
+        </div>
+        <div className="grid grid-cols-3 gap-1.5">
+          <label className="text-[10px] font-medium text-red-400">
+            ΔX
+            <input
+              type="number"
+              value={deltaX}
+              onChange={(e) => setDeltaX(e.target.value)}
+              className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+            />
+          </label>
+          <label className="text-[10px] font-medium text-emerald-400">
+            ΔY
+            <input
+              type="number"
+              value={deltaY}
+              onChange={(e) => setDeltaY(e.target.value)}
+              className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+            />
+          </label>
+          <label className="text-[10px] font-medium text-blue-400">
+            ΔZ (выс.)
+            <input
+              type="number"
+              value={deltaZ}
+              onChange={(e) => setDeltaZ(e.target.value)}
+              className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+            />
+          </label>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
+          <button
+            type="button"
+            onClick={() => moveElements(selectedElementIds, parsedDelta())}
+            className="rounded border border-[#343a46] bg-[#22262d] py-1.5 text-xs text-[#e6e8ec] hover:bg-[#2c313a]"
+          >
+            Сдвинуть
+          </button>
+          <button
+            type="button"
+            onClick={() => copyElements(selectedElementIds, parsedDelta())}
+            className="inline-flex items-center justify-center gap-1 rounded bg-blue-600/20 border border-blue-500/40 py-1.5 text-xs text-blue-200 hover:bg-blue-600/30"
+          >
+            <Copy className="h-3 w-3" />
+            Копировать
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => groupSelectedElements()}
+          className="inline-flex items-center justify-center gap-1.5 rounded border border-[#343a46] bg-[#22262d] py-1.5 text-xs text-[#e6e8ec] hover:bg-[#2c313a]"
+        >
+          <Group className="h-3.5 w-3.5 text-blue-400" />
+          Сгруппировать
+        </button>
+
+        <button
+          type="button"
+          onClick={() => ungroupSelectedElements()}
+          disabled={!hasGrouped}
+          className="inline-flex items-center justify-center gap-1.5 rounded border border-[#343a46] bg-[#22262d] py-1.5 text-xs text-[#e6e8ec] hover:bg-[#2c313a] disabled:opacity-40"
+        >
+          <Ungroup className="h-3.5 w-3.5" />
+          Разгруппировать
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => deleteElements(selectedElementIds)}
+        className="inline-flex items-center justify-center gap-1.5 rounded border border-rose-500/40 bg-rose-500/10 py-2 text-xs text-rose-300 hover:bg-rose-500/20"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+        Удалить выбранные ({selectedElementIds.length})
+      </button>
+    </aside>
+  );
+}
+
 type InspectorTab = "estimate" | "joints" | "grid";
 
 export function RightInspector() {
@@ -242,11 +464,6 @@ export function RightInspector() {
   const selectedElementIds = useProjectStore((s) => s.selectedElementIds);
   const selectedJointId = useProjectStore((s) => s.selectedJointId);
 
-  const deleteElements = useProjectStore((s) => s.deleteElements);
-  const copyElements = useProjectStore((s) => s.copyElements);
-  const assignProfileToElements = useProjectStore((s) => s.assignProfileToElements);
-  const groupSelectedElements = useProjectStore((s) => s.groupSelectedElements);
-  const ungroupSelectedElements = useProjectStore((s) => s.ungroupSelectedElements);
   const updateGridSettings = useProjectStore((s) => s.updateGridSettings);
 
   const [activeTab, setActiveTab] = useState<InspectorTab>("estimate");
@@ -278,99 +495,7 @@ export function RightInspector() {
 
   // Режим множественного выделения и работы с группой
   if (selectedElementIds.length > 1) {
-    const selectedElements = project.elements.filter((el) =>
-      selectedElementIds.includes(el.id)
-    );
-    const totalSelectedMeters = selectedElements.reduce(
-      (sum, el) => sum + mmToMeters(getElementLengthMm(el)),
-      0
-    );
-    const hasGrouped = selectedElements.some((el) => Boolean(el.groupId));
-    const offsetStep = project.gridSettings.minorStepMm || 100;
-
-    return (
-      <aside className="flex w-80 shrink-0 flex-col border-l border-[#2c313a] bg-[#181b20] p-3 space-y-3">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-[#9aa2b1]">
-            Выбрано элементов: {selectedElementIds.length}
-          </div>
-          <div className="mt-1 text-xs text-[#9aa2b1]">
-            Суммарная длина:{" "}
-            <strong className="tabular-nums text-[#e6e8ec]">
-              {totalSelectedMeters.toFixed(2)} м
-            </strong>
-          </div>
-        </div>
-
-        <label className="block text-[11px] text-[#9aa2b1]">
-          Назначить профиль всем выбранным
-          <select
-            defaultValue=""
-            onChange={(e) => {
-              if (e.target.value) {
-                assignProfileToElements(selectedElementIds, e.target.value);
-                e.target.value = "";
-              }
-            }}
-            className="mt-1 w-full rounded border border-[#2c313a] bg-[#121417] px-2 py-1.5 text-xs text-white outline-none focus:border-blue-500"
-          >
-            <option value="" disabled>
-              Выберите профиль...
-            </option>
-            {project.profiles.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} ({formatMoney(p.pricePerMeter, project.calculationSettings.currency)}/м)
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => groupSelectedElements()}
-            className="inline-flex items-center justify-center gap-1.5 rounded border border-[#343a46] bg-[#22262d] py-1.5 text-xs text-[#e6e8ec] hover:bg-[#2c313a]"
-          >
-            <Group className="h-3.5 w-3.5 text-blue-400" />
-            Сгруппировать
-          </button>
-
-          <button
-            type="button"
-            onClick={() => ungroupSelectedElements()}
-            disabled={!hasGrouped}
-            className="inline-flex items-center justify-center gap-1.5 rounded border border-[#343a46] bg-[#22262d] py-1.5 text-xs text-[#e6e8ec] hover:bg-[#2c313a] disabled:opacity-40"
-          >
-            <Ungroup className="h-3.5 w-3.5" />
-            Разгруппировать
-          </button>
-        </div>
-
-        <button
-          type="button"
-          onClick={() =>
-            copyElements(selectedElementIds, {
-              x: offsetStep,
-              y: offsetStep,
-              z: 0,
-            })
-          }
-          className="inline-flex items-center justify-center gap-1.5 rounded border border-[#343a46] bg-[#22262d] py-2 text-xs text-[#e6e8ec] hover:bg-[#2c313a]"
-        >
-          <Copy className="h-3.5 w-3.5" />
-          Копировать группу ({selectedElementIds.length})
-        </button>
-
-        <button
-          type="button"
-          onClick={() => deleteElements(selectedElementIds)}
-          className="inline-flex items-center justify-center gap-1.5 rounded border border-rose-500/40 bg-rose-500/10 py-2 text-xs text-rose-300 hover:bg-rose-500/20"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-          Удалить выбранные ({selectedElementIds.length})
-        </button>
-      </aside>
-    );
+    return <MultiSelectionInspector selectedElementIds={selectedElementIds} />;
   }
 
   // Ничего не выбрано: вкладки Смета / Соединения / Сетка и проект
