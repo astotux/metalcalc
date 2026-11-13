@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Calculator, Copy, Sliders, Trash2 } from "lucide-react";
+import { Calculator, Copy, Group, Sliders, Trash2, Ungroup } from "lucide-react";
 import { calculateProjectEstimate, formatMoney, roundMoney } from "@/lib/calculations/estimate";
 import { getElementLengthMm, mmToMeters, roundMm } from "@/lib/geometry/elements";
 import { useProjectStore } from "@/store/useProjectStore";
@@ -238,6 +238,9 @@ export function RightInspector() {
   const selectedElementIds = useProjectStore((s) => s.selectedElementIds);
 
   const deleteElements = useProjectStore((s) => s.deleteElements);
+  const copyElements = useProjectStore((s) => s.copyElements);
+  const groupSelectedElements = useProjectStore((s) => s.groupSelectedElements);
+  const ungroupSelectedElements = useProjectStore((s) => s.ungroupSelectedElements);
   const updateGridSettings = useProjectStore((s) => s.updateGridSettings);
   const updateCalculationSettings = useProjectStore((s) => s.updateCalculationSettings);
 
@@ -264,20 +267,72 @@ export function RightInspector() {
     );
   }
 
-  // Режим множественного выделения
+  // Режим множественного выделения и работы с группой
   if (selectedElementIds.length > 1) {
+    const selectedElements = project.elements.filter((el) =>
+      selectedElementIds.includes(el.id)
+    );
+    const totalSelectedMeters = selectedElements.reduce(
+      (sum, el) => sum + mmToMeters(getElementLengthMm(el)),
+      0
+    );
+    const hasGrouped = selectedElements.some((el) => Boolean(el.groupId));
+    const offsetStep = project.gridSettings.minorStepMm || 100;
+
     return (
-      <aside className="flex w-80 shrink-0 flex-col border-l border-[#2c313a] bg-[#181b20] p-3">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#9aa2b1]">
-          Выбрано элементов: {selectedElementIds.length}
+      <aside className="flex w-80 shrink-0 flex-col border-l border-[#2c313a] bg-[#181b20] p-3 space-y-3">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-[#9aa2b1]">
+            Выбрано элементов: {selectedElementIds.length}
+          </div>
+          <div className="mt-1 text-xs text-[#9aa2b1]">
+            Суммарная длина:{" "}
+            <strong className="tabular-nums text-[#e6e8ec]">
+              {totalSelectedMeters.toFixed(2)} м
+            </strong>
+          </div>
         </div>
-        <p className="mt-2 text-xs text-[#9aa2b1]">
-          Групповое редактирование и объединение в группы доступно в следующих шагах. Сейчас вы можете удалить выбранные элементы.
-        </p>
+
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => groupSelectedElements()}
+            className="inline-flex items-center justify-center gap-1.5 rounded border border-[#343a46] bg-[#22262d] py-1.5 text-xs text-[#e6e8ec] hover:bg-[#2c313a]"
+          >
+            <Group className="h-3.5 w-3.5 text-blue-400" />
+            Сгруппировать
+          </button>
+
+          <button
+            type="button"
+            onClick={() => ungroupSelectedElements()}
+            disabled={!hasGrouped}
+            className="inline-flex items-center justify-center gap-1.5 rounded border border-[#343a46] bg-[#22262d] py-1.5 text-xs text-[#e6e8ec] hover:bg-[#2c313a] disabled:opacity-40"
+          >
+            <Ungroup className="h-3.5 w-3.5" />
+            Разгруппировать
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={() =>
+            copyElements(selectedElementIds, {
+              x: offsetStep,
+              y: offsetStep,
+              z: 0,
+            })
+          }
+          className="inline-flex items-center justify-center gap-1.5 rounded border border-[#343a46] bg-[#22262d] py-2 text-xs text-[#e6e8ec] hover:bg-[#2c313a]"
+        >
+          <Copy className="h-3.5 w-3.5" />
+          Копировать группу ({selectedElementIds.length})
+        </button>
+
         <button
           type="button"
           onClick={() => deleteElements(selectedElementIds)}
-          className="mt-4 inline-flex items-center justify-center gap-1.5 rounded border border-rose-500/40 bg-rose-500/10 py-2 text-xs text-rose-300 hover:bg-rose-500/20"
+          className="inline-flex items-center justify-center gap-1.5 rounded border border-rose-500/40 bg-rose-500/10 py-2 text-xs text-rose-300 hover:bg-rose-500/20"
         >
           <Trash2 className="h-3.5 w-3.5" />
           Удалить выбранные ({selectedElementIds.length})
@@ -386,8 +441,50 @@ export function RightInspector() {
               checked={project.gridSettings.snapEnabled}
               onChange={(e) => updateGridSettings({ snapEnabled: e.target.checked })}
             />
-            Привязка к сетке и узлам
+            Включить привязки (общая)
           </label>
+          {project.gridSettings.snapEnabled && (
+            <div className="ml-4 space-y-1 border-l border-[#2c313a] pl-2.5 text-[11px] text-[#9aa2b1]">
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={project.gridSettings.snapToGrid}
+                  onChange={(e) => updateGridSettings({ snapToGrid: e.target.checked })}
+                />
+                К сетке ({project.gridSettings.minorStepMm} мм)
+              </label>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={project.gridSettings.snapToEndpoints}
+                  onChange={(e) =>
+                    updateGridSettings({ snapToEndpoints: e.target.checked })
+                  }
+                />
+                К концам линий
+              </label>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={project.gridSettings.snapToIntersections}
+                  onChange={(e) =>
+                    updateGridSettings({ snapToIntersections: e.target.checked })
+                  }
+                />
+                К пересечениям
+              </label>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={project.gridSettings.snapToAngles}
+                  onChange={(e) =>
+                    updateGridSettings({ snapToAngles: e.target.checked })
+                  }
+                />
+                К углам (шаг 45°)
+              </label>
+            </div>
+          )}
         </div>
       </section>
 

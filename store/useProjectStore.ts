@@ -8,10 +8,12 @@ import type {
   CameraPreset,
   ConstructionElement,
   DrawingTool,
+  ElementGroup,
   GridSettings,
   JointConnection,
   MaterialProfile,
   MetalCalcProject,
+  Point2D,
   Point3D,
   SaveStatus,
   ViewMode,
@@ -22,6 +24,7 @@ const STORAGE_KEY_ACTIVE_ID = "metalcalc_active_project_id_v1";
 
 interface HistorySnapshot {
   elements: ConstructionElement[];
+  groups: ElementGroup[];
   joints: JointConnection[];
 }
 
@@ -47,20 +50,30 @@ interface ProjectStoreState {
   setActiveTool: (tool: DrawingTool) => void;
   setActiveProfileId: (profileId: string) => void;
   selectElement: (elementId: string | null, additive?: boolean) => void;
+  selectMultipleElements: (elementIds: string[], additive?: boolean) => void;
   clearSelection: () => void;
 
   // Вид и сетка
   setViewMode: (mode: ViewMode) => void;
   setCameraPreset: (preset: CameraPreset) => void;
   setZoomPercent: (zoomPercent: number) => void;
+  setPanOffsetMm: (offsetMm: Point2D) => void;
   updateGridSettings: (patch: Partial<GridSettings>) => void;
 
   // Операции с элементами (единая модель)
   addElement: (start: Point3D, end: Point3D, profileId?: string) => string;
+  addElementsBatch: (
+    items: Array<{ start: Point3D; end: Point3D; profileId?: string }>
+  ) => string[];
   updateElement: (id: string, patch: Partial<ConstructionElement>) => void;
+  setElementEndpoints: (id: string, start: Point3D, end: Point3D) => void;
+  moveElements: (ids: string[], deltaMm: Point3D) => void;
+  copyElements: (ids: string[], deltaMm: Point3D) => string[];
   resizeElementLength: (id: string, targetLengthMm: number) => void;
   deleteElements: (ids: string[]) => void;
   duplicateElement: (id: string) => string | null;
+  groupSelectedElements: () => string | null;
+  ungroupSelectedElements: () => void;
 
   // Каталог профилей
   addProfile: (profile: Omit<MaterialProfile, "id">) => string;
@@ -93,12 +106,33 @@ function cloneSnapshot(project: MetalCalcProject): HistorySnapshot {
       start: { ...el.start },
       end: { ...el.end },
     })),
+    groups: project.groups.map((g) => ({
+      ...g,
+      elementIds: [...g.elementIds],
+    })),
     joints: project.joints.map((j) => ({
       ...j,
       elementIds: [...j.elementIds],
       position: { ...j.position },
     })),
   };
+}
+
+/** Расширяет список выбранных элементов до полных групп, если какие-то элементы состоят в группе. */
+function expandSelectionWithGroups(
+  elements: ConstructionElement[],
+  groups: ElementGroup[],
+  ids: string[]
+): string[] {
+  const result = new Set(ids);
+  for (const id of ids) {
+    const el = elements.find((item) => item.id === id);
+    if (el?.groupId) {
+      const grp = groups.find((g) => g.id === el.groupId);
+      grp?.elementIds.forEach((memberId) => result.add(memberId));
+    }
+  }
+  return Array.from(result);
 }
 
 function readStoredProjects(): Record<string, MetalCalcProject> {
@@ -139,14 +173,38 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       if (!elementId) {
         return { selectedElementIds: [] };
       }
+      const expanded = expandSelectionWithGroups(
+        state.project.elements,
+        state.project.groups,
+        [elementId]
+      );
       if (!additive) {
-        return { selectedElementIds: [elementId] };
+        return { selectedElementIds: expanded };
       }
-      const exists = state.selectedElementIds.includes(elementId);
+      const allPresent = expanded.every((id) => state.selectedElementIds.includes(id));
+      if (allPresent) {
+        const removeSet = new Set(expanded);
+        return {
+          selectedElementIds: state.selectedElementIds.filter((id) => !removeSet.has(id)),
+        };
+      }
       return {
-        selectedElementIds: exists
-          ? state.selectedElementIds.filter((id) => id !== elementId)
-          : [...state.selectedElementIds, elementId],
+        selectedElementIds: Array.from(new Set([...state.selectedElementIds, ...expanded])),
+      };
+    }),
+
+  selectMultipleElements: (elementIds, additive = false) =>
+    set((state) => {
+      const expanded = expandSelectionWithGroups(
+        state.project.elements,
+        state.project.groups,
+        elementIds
+      );
+      if (!additive) {
+        return { selectedElementIds: expanded };
+      }
+      return {
+        selectedElementIds: Array.from(new Set([...state.selectedElementIds, ...expanded])),
       };
     }),
 
@@ -177,6 +235,17 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         displaySettings: {
           ...state.project.displaySettings,
           zoomPercent: Math.min(400, Math.max(10, Math.round(zoomPercent))),
+        },
+      },
+    })),
+
+  setPanOffsetMm: (panOffsetMm) =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        displaySettings: {
+          ...state.project.displaySettings,
+          panOffsetMm: { x: panOffsetMm.x, y: panOffsetMm.y },
         },
       },
     })),
@@ -222,6 +291,36 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     return id;
   },
 
+  addElementsBatch: (items) => {
+    const state = get();
+    if (items.length === 0) return [];
+
+    const snapshot = cloneSnapshot(state.project);
+    const created: ConstructionElement[] = items.map((item, idx) => ({
+      id: `el-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
+      type: "beam",
+      start: { x: roundMm(item.start.x), y: roundMm(item.start.y), z: roundMm(item.start.z) },
+      end: { x: roundMm(item.end.x), y: roundMm(item.end.y), z: roundMm(item.end.z) },
+      profileId:
+        item.profileId ?? state.activeProfileId ?? state.project.profiles[0]?.id ?? "",
+    }));
+
+    const createdIds = created.map((el) => el.id);
+    set({
+      project: {
+        ...state.project,
+        elements: [...state.project.elements, ...created],
+        updatedAt: new Date().toISOString(),
+      },
+      selectedElementIds: createdIds,
+      saveStatus: "unsaved",
+      historyPast: [...state.historyPast.slice(-49), snapshot],
+      historyFuture: [],
+    });
+
+    return createdIds;
+  },
+
   updateElement: (id, patch) =>
     set((state) => {
       const target = state.project.elements.find((el) => el.id === id);
@@ -250,6 +349,111 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         historyFuture: [],
       };
     }),
+
+  setElementEndpoints: (id, start, end) =>
+    set((state) => {
+      const target = state.project.elements.find((el) => el.id === id);
+      if (!target) return state;
+
+      const snapshot = cloneSnapshot(state.project);
+      return {
+        project: {
+          ...state.project,
+          elements: state.project.elements.map((el) =>
+            el.id === id
+              ? {
+                  ...el,
+                  start: { x: roundMm(start.x), y: roundMm(start.y), z: roundMm(start.z) },
+                  end: { x: roundMm(end.x), y: roundMm(end.y), z: roundMm(end.z) },
+                }
+              : el
+          ),
+          updatedAt: new Date().toISOString(),
+        },
+        saveStatus: "unsaved",
+        historyPast: [...state.historyPast.slice(-49), snapshot],
+        historyFuture: [],
+      };
+    }),
+
+  moveElements: (ids, deltaMm) =>
+    set((state) => {
+      if (ids.length === 0) return state;
+      if (Math.abs(deltaMm.x) < 0.01 && Math.abs(deltaMm.y) < 0.01 && Math.abs(deltaMm.z) < 0.01) {
+        return state;
+      }
+
+      const idSet = new Set(ids);
+      const snapshot = cloneSnapshot(state.project);
+
+      return {
+        project: {
+          ...state.project,
+          elements: state.project.elements.map((el) =>
+            idSet.has(el.id)
+              ? {
+                  ...el,
+                  start: {
+                    x: roundMm(el.start.x + deltaMm.x),
+                    y: roundMm(el.start.y + deltaMm.y),
+                    z: roundMm(el.start.z + deltaMm.z),
+                  },
+                  end: {
+                    x: roundMm(el.end.x + deltaMm.x),
+                    y: roundMm(el.end.y + deltaMm.y),
+                    z: roundMm(el.end.z + deltaMm.z),
+                  },
+                }
+              : el
+          ),
+          updatedAt: new Date().toISOString(),
+        },
+        saveStatus: "unsaved",
+        historyPast: [...state.historyPast.slice(-49), snapshot],
+        historyFuture: [],
+      };
+    }),
+
+  copyElements: (ids, deltaMm) => {
+    const state = get();
+    const idSet = new Set(ids);
+    const sources = state.project.elements.filter((el) => idSet.has(el.id));
+    if (sources.length === 0) return [];
+
+    const snapshot = cloneSnapshot(state.project);
+    const copies: ConstructionElement[] = sources.map((source, idx) => ({
+      ...source,
+      id: `el-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
+      start: {
+        x: roundMm(source.start.x + deltaMm.x),
+        y: roundMm(source.start.y + deltaMm.y),
+        z: roundMm(source.start.z + deltaMm.z),
+      },
+      end: {
+        x: roundMm(source.end.x + deltaMm.x),
+        y: roundMm(source.end.y + deltaMm.y),
+        z: roundMm(source.end.z + deltaMm.z),
+      },
+      groupId: undefined,
+      jointStartId: undefined,
+      jointEndId: undefined,
+    }));
+
+    const copyIds = copies.map((c) => c.id);
+    set({
+      project: {
+        ...state.project,
+        elements: [...state.project.elements, ...copies],
+        updatedAt: new Date().toISOString(),
+      },
+      selectedElementIds: copyIds,
+      saveStatus: "unsaved",
+      historyPast: [...state.historyPast.slice(-49), snapshot],
+      historyFuture: [],
+    });
+
+    return copyIds;
+  },
 
   resizeElementLength: (id, targetLengthMm) =>
     set((state) => {
@@ -339,6 +543,74 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     return newId;
   },
 
+  groupSelectedElements: () => {
+    const state = get();
+    if (state.selectedElementIds.length < 2) return null;
+
+    const groupId = `grp-${Date.now()}`;
+    const selectedSet = new Set(state.selectedElementIds);
+    const snapshot = cloneSnapshot(state.project);
+
+    const newGroup: ElementGroup = {
+      id: groupId,
+      name: `Группа (${state.selectedElementIds.length})`,
+      elementIds: [...state.selectedElementIds],
+    };
+
+    // Удаляем выделенные элементы из старых групп перед объединением
+    const cleanedGroups = state.project.groups
+      .map((g) => ({
+        ...g,
+        elementIds: g.elementIds.filter((id) => !selectedSet.has(id)),
+      }))
+      .filter((g) => g.elementIds.length >= 2);
+
+    set({
+      project: {
+        ...state.project,
+        elements: state.project.elements.map((el) =>
+          selectedSet.has(el.id) ? { ...el, groupId } : el
+        ),
+        groups: [...cleanedGroups, newGroup],
+        updatedAt: new Date().toISOString(),
+      },
+      saveStatus: "unsaved",
+      historyPast: [...state.historyPast.slice(-49), snapshot],
+      historyFuture: [],
+    });
+
+    return groupId;
+  },
+
+  ungroupSelectedElements: () =>
+    set((state) => {
+      if (state.selectedElementIds.length === 0) return state;
+      const selectedSet = new Set(state.selectedElementIds);
+      const affectedGroupIds = new Set(
+        state.project.elements
+          .filter((el) => selectedSet.has(el.id) && el.groupId)
+          .map((el) => el.groupId as string)
+      );
+      if (affectedGroupIds.size === 0) return state;
+
+      const snapshot = cloneSnapshot(state.project);
+      return {
+        project: {
+          ...state.project,
+          elements: state.project.elements.map((el) =>
+            el.groupId && affectedGroupIds.has(el.groupId)
+              ? { ...el, groupId: undefined }
+              : el
+          ),
+          groups: state.project.groups.filter((g) => !affectedGroupIds.has(g.id)),
+          updatedAt: new Date().toISOString(),
+        },
+        saveStatus: "unsaved",
+        historyPast: [...state.historyPast.slice(-49), snapshot],
+        historyFuture: [],
+      };
+    }),
+
   addProfile: (profileInput) => {
     const id = `prof-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const newProfile: MaterialProfile = { ...profileInput, id, isExample: false };
@@ -416,6 +688,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         project: {
           ...state.project,
           elements: previous.elements,
+          groups: previous.groups,
           joints: previous.joints,
           updatedAt: new Date().toISOString(),
         },
@@ -436,6 +709,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         project: {
           ...state.project,
           elements: next.elements,
+          groups: next.groups,
           joints: next.joints,
           updatedAt: new Date().toISOString(),
         },
