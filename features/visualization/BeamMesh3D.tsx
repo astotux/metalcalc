@@ -6,11 +6,13 @@ import {
   computeBeamTransform3D,
   createHollowTubeGeometry,
 } from "@/lib/geometry/beam3d";
+import type { BeamTrimData } from "@/lib/geometry/jointTrimming";
 import type { ConstructionElement, MaterialProfile } from "@/types";
 
 interface BeamMesh3DProps {
   element: ConstructionElement;
   profile: MaterialProfile | undefined;
+  trim?: BeamTrimData;
   isSelected: boolean;
   onSelect: (elementId: string, additive: boolean) => void;
 }
@@ -18,6 +20,7 @@ interface BeamMesh3DProps {
 export function BeamMesh3D({
   element,
   profile,
+  trim,
   isSelected,
   onSelect,
 }: BeamMesh3DProps) {
@@ -36,9 +39,10 @@ export function BeamMesh3D({
     () =>
       createHollowTubeGeometry(
         { widthMm, heightMm, wallThicknessMm },
-        transform.lengthMeters
+        transform.lengthMeters,
+        trim
       ),
-    [widthMm, heightMm, wallThicknessMm, transform.lengthMeters]
+    [widthMm, heightMm, wallThicknessMm, transform.lengthMeters, trim]
   );
 
   useEffect(() => {

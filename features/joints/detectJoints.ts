@@ -217,6 +217,8 @@ export function detectProjectJoints(
       type: match.type,
       weldLengthMm: match.weldLengthMm,
       cutAngleDeg: match.cutAngleDeg ?? item.cutAngleDeg,
+      trimMode: match.trimMode,
+      primaryElementId: match.primaryElementId,
       processingNotes: match.processingNotes,
     };
   });

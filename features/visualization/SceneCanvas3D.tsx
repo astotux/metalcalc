@@ -15,6 +15,7 @@ import {
   modelPointToScene,
 } from "@/lib/geometry/beam3d";
 import { getElementLengthMm, roundMm } from "@/lib/geometry/elements";
+import { computeElementTrims } from "@/lib/geometry/jointTrimming";
 import {
   buildRectangleSegments3D,
   snapPoint3D,
@@ -292,6 +293,11 @@ export default function SceneCanvas3D() {
     if (!singleSelectedElement) return null;
     return displayedElements.find((el) => el.id === singleSelectedElement.id) ?? null;
   }, [displayedElements, singleSelectedElement]);
+
+  const elementTrims = useMemo(
+    () => computeElementTrims(displayedElements, project.profiles, project.joints),
+    [displayedElements, project.profiles, project.joints]
+  );
 
   // Позиция 3D-манипулятора (центр выделения или выбранная вершина)
   const gizmoAnchorMm = useMemo<Point3D | null>(() => {
@@ -741,6 +747,7 @@ export default function SceneCanvas3D() {
             key={element.id}
             element={element}
             profile={profileMap.get(element.profileId)}
+            trim={elementTrims.get(element.id)}
             isSelected={displayedSelectedSet.has(element.id)}
             onSelect={(id, additive) => {
               if (isDrawingTool) {

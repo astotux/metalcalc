@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import type { BeamTrimData } from "@/lib/geometry/jointTrimming";
 import type { CameraPreset, ConstructionElement, MaterialProfile, Point3D } from "@/types";
 
 /** Перевод миллиметров модели в метры 3D-сцены (1000 мм = 1 единица сцены). */
@@ -69,10 +70,12 @@ export function computeBeamTransform3D(
 /**
  * Создаёт полую 3D-геометрию прямоугольной или квадратной профильной трубы,
  * центрированную в (0, 0, 0) и вытянутую вдоль локальной оси Z на lengthMeters.
+ * При передаче `trim` подрезает/сращивает торцы по плоскостям стыков.
  */
 export function createHollowTubeGeometry(
   profile: Pick<MaterialProfile, "widthMm" | "heightMm" | "wallThicknessMm">,
-  lengthMeters: number
+  lengthMeters: number,
+  trim?: BeamTrimData
 ): THREE.BufferGeometry {
   const w = Math.max(0.004, profile.widthMm * MM_TO_SCENE);
   const h = Math.max(0.004, profile.heightMm * MM_TO_SCENE);
@@ -113,6 +116,30 @@ export function createHollowTubeGeometry(
 
   // Центрируем экструзию по локальной оси Z вокруг середины балки
   geometry.translate(0, 0, -safeLength / 2);
+
+  if (
+    trim &&
+    (trim.start.d0Mm !== 0 ||
+      trim.start.slopeX !== 0 ||
+      trim.start.slopeY !== 0 ||
+      trim.end.d0Mm !== 0 ||
+      trim.end.slopeX !== 0 ||
+      trim.end.slopeY !== 0)
+  ) {
+    const posAttr = geometry.getAttribute("position");
+    for (let i = 0; i < posAttr.count; i += 1) {
+      const x = posAttr.getX(i);
+      const y = posAttr.getY(i);
+      const z = posAttr.getZ(i);
+      const cut = z < 0 ? trim.start : trim.end;
+      const dz = cut.d0Mm * MM_TO_SCENE + cut.slopeX * x + cut.slopeY * y;
+      posAttr.setZ(i, z + dz);
+    }
+    posAttr.needsUpdate = true;
+    geometry.computeBoundingBox();
+    geometry.computeBoundingSphere();
+  }
+
   geometry.computeVertexNormals();
   return geometry;
 }

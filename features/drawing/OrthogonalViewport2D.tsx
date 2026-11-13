@@ -5,6 +5,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { Circle, Group, Layer, Line, Rect, Stage, Text } from "react-konva";
 import { Maximize2, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import { getElementLengthMm, getElementMidpoint, roundMm } from "@/lib/geometry/elements";
+import { computeElementTrims, projectBeamPolygon2D } from "@/lib/geometry/jointTrimming";
 import {
   delta2DToDelta3D,
   distancePointToSegment2D,
@@ -836,6 +837,51 @@ export const OrthogonalViewport2D = forwardRef<
   const originScreen = worldToScreen({ x: 0, y: 0 });
   const axisMeta = niceAxisLabels(plane, palette);
 
+  const effectiveElements = useMemo(() => {
+    if (dragAction?.kind === "move") {
+      const delta3D = delta2DToDelta3D(dragAction.deltaMm.x, dragAction.deltaMm.y, plane);
+      const targetSet = new Set(dragAction.targetIds);
+      return elements.map((el) =>
+        targetSet.has(el.id)
+          ? {
+              ...el,
+              start: {
+                x: el.start.x + delta3D.x,
+                y: el.start.y + delta3D.y,
+                z: el.start.z + delta3D.z,
+              },
+              end: {
+                x: el.end.x + delta3D.x,
+                y: el.end.y + delta3D.y,
+                z: el.end.z + delta3D.z,
+              },
+            }
+          : el
+      );
+    }
+    if (dragAction?.kind === "resize_handle") {
+      const nextEndPt = planeCoordsToPoint3D(
+        dragAction.currentPointMm.x,
+        dragAction.currentPointMm.y,
+        plane,
+        dragAction.thirdCoordMm
+      );
+      return elements.map((el) =>
+        el.id === dragAction.elementId
+          ? dragAction.endpoint === "start"
+            ? { ...el, start: nextEndPt }
+            : { ...el, end: nextEndPt }
+          : el
+      );
+    }
+    return elements;
+  }, [dragAction, elements, plane]);
+
+  const elementTrims = useMemo(
+    () => computeElementTrims(effectiveElements, profiles, joints),
+    [effectiveElements, joints, profiles]
+  );
+
   const canvasCursor = useMemo(() => {
     if (dragAction?.kind === "pan") return "grabbing";
     if (isSpacePressed) return "grab";
@@ -1021,51 +1067,20 @@ export const OrthogonalViewport2D = forwardRef<
 
         {/* Элементы конструкции и реальные 3D-размеры */}
         <Layer>
-          {elements.map((element) => {
+          {effectiveElements.map((element) => {
             const profile = profileMap.get(element.profileId);
             const isSelected = selectedSet.has(element.id);
             const isHovered = hoveredElementId === element.id;
 
-            let start3D: Point3D = { ...element.start };
-            let end3D: Point3D = { ...element.end };
-
-            if (dragAction?.kind === "move" && dragAction.targetIds.includes(element.id)) {
-              const delta3D = delta2DToDelta3D(
-                dragAction.deltaMm.x,
-                dragAction.deltaMm.y,
-                plane
-              );
-              start3D = {
-                x: element.start.x + delta3D.x,
-                y: element.start.y + delta3D.y,
-                z: element.start.z + delta3D.z,
-              };
-              end3D = {
-                x: element.end.x + delta3D.x,
-                y: element.end.y + delta3D.y,
-                z: element.end.z + delta3D.z,
-              };
-            } else if (
-              dragAction?.kind === "resize_handle" &&
-              dragAction.elementId === element.id
-            ) {
-              const nextEndPt = planeCoordsToPoint3D(
-                dragAction.currentPointMm.x,
-                dragAction.currentPointMm.y,
-                plane,
-                dragAction.thirdCoordMm
-              );
-              if (dragAction.endpoint === "start") start3D = nextEndPt;
-              else end3D = nextEndPt;
-            }
-
+            const start3D = element.start;
+            const end3D = element.end;
             const start2D = projectPoint3DToPlane2D(start3D, plane);
             const end2D = projectPoint3DToPlane2D(end3D, plane);
             const s = worldToScreen(start2D);
             const e = worldToScreen(end2D);
 
             const projectedPx = Math.hypot(e.x - s.x, e.y - s.y);
-            const strokeWidthPx = Math.max(3.5, ((profile?.widthMm ?? 40) * scale) / 1.35);
+            const strokeWidthPx = Math.max(3.5, (profile?.widthMm ?? 40) * scale);
 
             // Реальная длина в 3D пространстве (X, Y, Z)
             const lengthMm = roundMm(getElementLengthMm({ start: start3D, end: end3D }));
@@ -1085,19 +1100,40 @@ export const OrthogonalViewport2D = forwardRef<
               lengthMm >= 1 &&
               (projectedPx >= 24 || isSelected);
 
+            const polyWorld = !isVerticalToView
+              ? projectBeamPolygon2D(element, profile, elementTrims.get(element.id), plane)
+              : [];
+            const polyScreenPoints =
+              polyWorld.length >= 3
+                ? polyWorld.flatMap((pt) => {
+                    const sp = worldToScreen(pt);
+                    return [sp.x, sp.y];
+                  })
+                : null;
+
             const labelText = `${lengthMm} мм`;
             const labelWidth = Math.max(52, labelText.length * 6.4 + 12);
 
             return (
               <Group key={element.id}>
                 {(isSelected || isHovered) && !isVerticalToView && (
-                  <Line
-                    points={[s.x, s.y, e.x, e.y]}
-                    stroke={palette.selectionHighlight}
-                    opacity={isSelected ? 0.78 : 0.28}
-                    strokeWidth={strokeWidthPx + 4}
-                    lineCap="butt"
-                  />
+                  polyScreenPoints ? (
+                    <Line
+                      points={polyScreenPoints}
+                      closed
+                      stroke={palette.selectionHighlight}
+                      opacity={isSelected ? 0.85 : 0.35}
+                      strokeWidth={isSelected ? 3 : 2}
+                    />
+                  ) : (
+                    <Line
+                      points={[s.x, s.y, e.x, e.y]}
+                      stroke={palette.selectionHighlight}
+                      opacity={isSelected ? 0.78 : 0.28}
+                      strokeWidth={strokeWidthPx + 4}
+                      lineCap="butt"
+                    />
+                  )
                 )}
 
                 {isVerticalToView ? (
@@ -1112,10 +1148,10 @@ export const OrthogonalViewport2D = forwardRef<
                       />
                     )}
                     <Rect
-                      x={s.x - Math.max(4, strokeWidthPx * 0.55)}
-                      y={s.y - Math.max(4, strokeWidthPx * 0.55)}
-                      width={Math.max(8, strokeWidthPx * 1.1)}
-                      height={Math.max(8, strokeWidthPx * 1.1)}
+                      x={s.x - Math.max(4, strokeWidthPx * 0.5)}
+                      y={s.y - Math.max(4, strokeWidthPx * 0.5)}
+                      width={Math.max(8, strokeWidthPx)}
+                      height={Math.max(8, strokeWidthPx)}
                       cornerRadius={2}
                       fill={beamColor}
                       stroke={isSelected ? palette.selectionHighlight : palette.beamCenterline}
@@ -1124,12 +1160,22 @@ export const OrthogonalViewport2D = forwardRef<
                   </Group>
                 ) : (
                   <>
-                    <Line
-                      points={[s.x, s.y, e.x, e.y]}
-                      stroke={beamColor}
-                      strokeWidth={strokeWidthPx}
-                      lineCap="butt"
-                    />
+                    {polyScreenPoints ? (
+                      <Line
+                        points={polyScreenPoints}
+                        closed
+                        fill={beamColor}
+                        stroke={palette.beamCenterline}
+                        strokeWidth={0.75}
+                      />
+                    ) : (
+                      <Line
+                        points={[s.x, s.y, e.x, e.y]}
+                        stroke={beamColor}
+                        strokeWidth={strokeWidthPx}
+                        lineCap="butt"
+                      />
+                    )}
                     <Line
                       points={[s.x, s.y, e.x, e.y]}
                       stroke={palette.beamCenterline}

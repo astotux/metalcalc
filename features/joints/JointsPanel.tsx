@@ -6,7 +6,14 @@ import {
   JOINT_TYPE_LABELS,
 } from "@/features/joints/detectJoints";
 import { useProjectStore } from "@/store/useProjectStore";
-import type { JointConnection, JointType } from "@/types";
+import type { JointConnection, JointTrimMode, JointType } from "@/types";
+
+const TRIM_MODE_OPTIONS: Array<{ id: JointTrimMode; label: string }> = [
+  { id: "auto", label: "Авто (по типу)" },
+  { id: "miter", label: "На ус (косой срез)" },
+  { id: "butt", label: "Встык (проход + примык.)" },
+  { id: "none", label: "Без подрезки (по осям)" },
+];
 
 export function JointsPanel() {
   const project = useProjectStore((s) => s.project);
@@ -188,6 +195,63 @@ export function SelectedJointInspector({ joint }: SelectedJointInspectorProps) {
             ))}
           </select>
         </label>
+
+        <label className="block text-[11px] text-[var(--mc-text-muted)]">
+          Сращивание торцов (2D / 3D)
+          <select
+            value={joint.trimMode ?? "auto"}
+            onChange={(e) =>
+              updateJoint(joint.id, {
+                trimMode: e.target.value as JointTrimMode,
+              })
+            }
+            className="mt-1 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2 py-1.5 text-xs text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
+          >
+            {TRIM_MODE_OPTIONS.map((opt) => (
+              <option key={opt.id} value={opt.id}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {(joint.trimMode === "butt" ||
+          ((!joint.trimMode || joint.trimMode === "auto") && joint.type === "butt")) &&
+          joint.elementIds.length >= 2 && (
+            <div className="space-y-1.5">
+              <div className="text-[11px] text-[var(--mc-text-muted)]">
+                Проходная (сквозная) труба:
+              </div>
+              <div className="grid grid-cols-1 gap-1">
+                {joint.elementIds.map((elId, idx) => {
+                  const el = project.elements.find((item) => item.id === elId);
+                  const prof = el ? project.profiles.find((p) => p.id === el.profileId) : undefined;
+                  const isPrimary = (joint.primaryElementId ?? joint.elementIds[0]) === elId;
+                  return (
+                    <button
+                      key={elId}
+                      type="button"
+                      onClick={() => updateJoint(joint.id, { primaryElementId: elId })}
+                      className={`flex items-center justify-between rounded border px-2 py-1.5 text-left text-[11px] transition-colors ${
+                        isPrimary
+                          ? "border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] text-[var(--mc-text)]"
+                          : "border-[var(--mc-border)] bg-[var(--mc-bg-app)] text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
+                      }`}
+                    >
+                      <span className="truncate">
+                        {el?.label || prof?.name || `Труба #${idx + 1}`}
+                      </span>
+                      {isPrimary && (
+                        <span className="ml-2 shrink-0 rounded bg-[var(--mc-brand)] px-1.5 py-0.5 text-[10px] text-[var(--mc-brand-text)]">
+                          Сквозная
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
         <div>
           <label className="block text-[11px] text-[var(--mc-text-muted)]">

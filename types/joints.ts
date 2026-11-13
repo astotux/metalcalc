@@ -1,5 +1,8 @@
 import type { Point3D } from "./geometry";
 
+/** Режим геометрической подрезки/сращивания торцов в узле стыка. */
+export type JointTrimMode = "auto" | "miter" | "butt" | "none";
+
 /** Поддерживаемые типы соединений металлических элементов. */
 export type JointType =
   | "miter_90"
@@ -23,6 +26,10 @@ export interface JointConnection {
   weldLengthMm: number | null;
   /** Угол реза, градусы. */
   cutAngleDeg?: number;
+  /** Способ геометрической подрезки (по умолчанию выбирается автоматически по типу). */
+  trimMode?: JointTrimMode;
+  /** Для стыков встык / Т-стыков — идентификатор сквозного (проходного) элемента. */
+  primaryElementId?: string;
   /** Параметры или примечания по обработке узла. */
   processingNotes?: string;
 }

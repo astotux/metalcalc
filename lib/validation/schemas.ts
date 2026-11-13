@@ -94,6 +94,8 @@ export const jointConnectionSchema = z.object({
   position: point3DSchema,
   weldLengthMm: z.number().min(0).nullable(),
   cutAngleDeg: z.number().min(0).max(180).optional(),
+  trimMode: z.enum(["auto", "miter", "butt", "none"]).optional(),
+  primaryElementId: z.string().optional(),
   processingNotes: z.string().max(300).optional(),
 });
 

@@ -1,4 +1,5 @@
 import { buildProjectExportData, formatMoney, type ProjectExportData } from "@/lib/export/buildExportSummary";
+import { computeElementTrims, projectBeamPolygon2D } from "@/lib/geometry/jointTrimming";
 import type { MaterialProfile, MetalCalcProject } from "@/types";
 
 interface PdfMakeRuntime {
@@ -154,6 +155,7 @@ function buildProjectionCanvas(
 
   const lineOutlineWidth = plane === "xy" ? 4.0 : 3.4;
   const lineCoreWidth = plane === "xy" ? 2.4 : 2.0;
+  const trims = computeElementTrims(project.elements, project.profiles, project.joints);
 
   for (const el of project.elements) {
     const p1 = projectToPdfPlane(el.start.x, el.start.y, el.start.z, plane);
@@ -164,6 +166,7 @@ function buildProjectionCanvas(
     const y2 = toPdfY(p2.vScreen);
     const profile = profileMap.get(el.profileId);
     const beamColor = normalizeHexColor(el.color ?? profile?.color, "#2563eb");
+    const widthPt = (profile?.widthMm ?? 40) * scale;
 
     if (Math.hypot(x2 - x1, y2 - y1) < 1.2) {
       // Перпендикулярная плоскости труба (например, вертикальная стойка на виде сверху XY)
@@ -171,12 +174,27 @@ function buildProjectionCanvas(
         type: "ellipse",
         x: x1,
         y: y1,
-        r1: 2.6,
-        r2: 2.6,
+        r1: Math.max(2.6, Math.min(5, widthPt / 2)),
+        r2: Math.max(2.6, Math.min(5, widthPt / 2)),
         color: beamColor,
         lineColor: "#1e293b",
         lineWidth: 0.9,
       });
+    } else if (widthPt >= 1.8) {
+      const poly2D = projectBeamPolygon2D(el, profile, trims.get(el.id), plane);
+      if (poly2D.length >= 3) {
+        canvasItems.push({
+          type: "polyline",
+          closePath: true,
+          points: poly2D.map((pt) => ({
+            x: toPdfX(pt.x),
+            y: toPdfY(plane === "xy" ? pt.y : -pt.y),
+          })),
+          color: beamColor,
+          lineColor: "#1e293b",
+          lineWidth: 0.45,
+        });
+      }
     } else {
       canvasItems.push({
         type: "line",
