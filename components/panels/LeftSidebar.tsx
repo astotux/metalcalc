@@ -58,8 +58,10 @@ export function LeftSidebar() {
   // Поля быстрого добавления балки по координатам (мм)
   const [x1, setX1] = useState("0");
   const [y1, setY1] = useState("0");
+  const [z1, setZ1] = useState("0");
   const [x2, setX2] = useState("1000");
   const [y2, setY2] = useState("0");
+  const [z2, setZ2] = useState("0");
   const [beamError, setBeamError] = useState<string | null>(null);
 
   const estimate = calculateProjectEstimate(
@@ -84,20 +86,22 @@ export function LeftSidebar() {
     e.preventDefault();
     const sx = Number(x1);
     const sy = Number(y1);
+    const sz = Number(z1);
     const ex = Number(x2);
     const ey = Number(y2);
+    const ez = Number(z2);
 
-    if (![sx, sy, ex, ey].every(Number.isFinite)) {
+    if (![sx, sy, sz, ex, ey, ez].every(Number.isFinite)) {
       setBeamError("Введите корректные числа в миллиметрах.");
       return;
     }
-    if (Math.hypot(ex - sx, ey - sy) < 1) {
+    if (Math.hypot(ex - sx, ey - sy, ez - sz) < 1) {
       setBeamError("Длина элемента должна быть не менее 1 мм.");
       return;
     }
 
     setBeamError(null);
-    addElement({ x: sx, y: sy, z: 0 }, { x: ex, y: ey, z: 0 }, activeProfileId);
+    addElement({ x: sx, y: sy, z: sz }, { x: ex, y: ey, z: ez }, activeProfileId);
   };
 
   const openCatalogForNew = () => {
@@ -284,41 +288,59 @@ export function LeftSidebar() {
             </h2>
           </div>
           <form onSubmit={handleAddBeam} className="space-y-2">
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-3 gap-1.5">
               <label className="text-[10px] text-[#9aa2b1]">
-                Начало X
+                Нач. X
                 <input
                   type="number"
                   value={x1}
                   onChange={(e) => setX1(e.target.value)}
-                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-2 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
                 />
               </label>
               <label className="text-[10px] text-[#9aa2b1]">
-                Начало Y
+                Нач. Y
                 <input
                   type="number"
                   value={y1}
                   onChange={(e) => setY1(e.target.value)}
-                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-2 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
                 />
               </label>
               <label className="text-[10px] text-[#9aa2b1]">
-                Конец X
+                Нач. Z
+                <input
+                  type="number"
+                  value={z1}
+                  onChange={(e) => setZ1(e.target.value)}
+                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+                />
+              </label>
+              <label className="text-[10px] text-[#9aa2b1]">
+                Кон. X
                 <input
                   type="number"
                   value={x2}
                   onChange={(e) => setX2(e.target.value)}
-                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-2 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
                 />
               </label>
               <label className="text-[10px] text-[#9aa2b1]">
-                Конец Y
+                Кон. Y
                 <input
                   type="number"
                   value={y2}
                   onChange={(e) => setY2(e.target.value)}
-                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-2 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+                />
+              </label>
+              <label className="text-[10px] text-[#9aa2b1]">
+                Кон. Z
+                <input
+                  type="number"
+                  value={z2}
+                  onChange={(e) => setZ2(e.target.value)}
+                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
                 />
               </label>
             </div>
