@@ -538,11 +538,25 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       if (ids.length === 0) return state;
       const idSet = new Set(ids);
       const snapshot = cloneSnapshot(state.project);
+      const nextGroups = state.project.groups
+        .map((g) => ({
+          ...g,
+          elementIds: g.elementIds.filter((elId) => !idSet.has(elId)),
+        }))
+        .filter((g) => g.elementIds.length >= 2);
+      const validGroupIds = new Set(nextGroups.map((g) => g.id));
 
       return {
         project: {
           ...state.project,
-          elements: state.project.elements.filter((el) => !idSet.has(el.id)),
+          elements: state.project.elements
+            .filter((el) => !idSet.has(el.id))
+            .map((el) =>
+              el.groupId && !validGroupIds.has(el.groupId)
+                ? { ...el, groupId: undefined }
+                : el
+            ),
+          groups: nextGroups,
           joints: state.project.joints.filter(
             (j) => !j.elementIds.some((elId) => idSet.has(elId))
           ),

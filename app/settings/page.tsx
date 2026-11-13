@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Check } from "lucide-react";
+import { useEffect } from "react";
+import { AlertCircle, ArrowLeft, Check, CheckCircle2, Clock } from "lucide-react";
 import { PROFILE_SHAPE_CATALOG } from "@/features/profiles/defaults";
 import { useProjectStore } from "@/store/useProjectStore";
 import type { CurrencyCode, WeldPricingMode } from "@/types";
@@ -9,9 +10,15 @@ import type { CurrencyCode, WeldPricingMode } from "@/types";
 export default function SettingsPage() {
   const project = useProjectStore((s) => s.project);
   const saveStatus = useProjectStore((s) => s.saveStatus);
+  const lastError = useProjectStore((s) => s.lastError);
+  const hydrateFromStorage = useProjectStore((s) => s.hydrateFromStorage);
   const updateCalculationSettings = useProjectStore((s) => s.updateCalculationSettings);
   const updateGridSettings = useProjectStore((s) => s.updateGridSettings);
   const saveCurrentProject = useProjectStore((s) => s.saveCurrentProject);
+
+  useEffect(() => {
+    void hydrateFromStorage();
+  }, [hydrateFromStorage]);
 
   return (
     <div className="min-h-screen bg-[#141619] text-[#e6e8ec]">
@@ -26,15 +33,35 @@ export default function SettingsPage() {
           </Link>
           <span className="text-sm font-semibold text-white">Настройки MetalCalc</span>
         </div>
-        <button
-          type="button"
-          onClick={() => void saveCurrentProject()}
-          disabled={saveStatus === "saving"}
-          className="inline-flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-60"
-        >
-          <Check className="h-3.5 w-3.5" />
-          {saveStatus === "saving" ? "Сохранение..." : "Сохранить проект"}
-        </button>
+        <div className="flex items-center gap-3">
+          {saveStatus === "saved" && (
+            <span className="hidden items-center gap-1 text-xs text-emerald-300 sm:inline-flex">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Сохранено
+            </span>
+          )}
+          {saveStatus === "unsaved" && (
+            <span className="hidden items-center gap-1 text-xs text-amber-300 sm:inline-flex">
+              <Clock className="h-3.5 w-3.5" />
+              Есть несохранённые изменения
+            </span>
+          )}
+          {saveStatus === "error" && (
+            <span className="hidden items-center gap-1 text-xs text-rose-300 sm:inline-flex">
+              <AlertCircle className="h-3.5 w-3.5" />
+              {lastError ?? "Ошибка"}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => void saveCurrentProject()}
+            disabled={saveStatus === "saving"}
+            className="inline-flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-60"
+          >
+            <Check className="h-3.5 w-3.5" />
+            {saveStatus === "saving" ? "Сохранение..." : "Сохранить проект"}
+          </button>
+        </div>
       </header>
 
       <main className="mx-auto max-w-4xl p-6 space-y-6">
