@@ -22,6 +22,7 @@ import {
   type WorkPlane3D,
 } from "@/lib/geometry/snapping3d";
 import { useProjectStore } from "@/store/useProjectStore";
+import { CANVAS_PALETTES, useThemeStore } from "@/store/useThemeStore";
 import type { CameraPreset, ConstructionElement, Point3D } from "@/types";
 
 const CAMERA_PRESETS: { id: CameraPreset; label: string }[] = [
@@ -179,6 +180,8 @@ export default function SceneCanvas3D() {
     point: Point3D;
     snappedTo: Snap3DSource;
   } | null>(null);
+  const theme = useThemeStore((s) => s.theme);
+  const palette = CANVAS_PALETTES[theme];
 
   const isDrawingTool =
     activeTool === "line" || activeTool === "rectangle" || activeTool === "polyline";
@@ -449,18 +452,18 @@ export default function SceneCanvas3D() {
   const stepMm = Math.max(10, minorStepMm || 100);
 
   return (
-    <div className="relative flex-1 overflow-hidden bg-[#121417]">
+    <div className="relative flex-1 overflow-hidden bg-[var(--mc-bg-canvas)]">
       {/* Плавающая верхняя панель 3D-редактора */}
       <div className="pointer-events-none absolute left-3 right-3 top-3 z-10 flex flex-wrap items-start justify-between gap-2">
         <div className="pointer-events-auto flex flex-col gap-1.5">
-          <div className="flex flex-wrap items-center gap-2 rounded border border-[#2c313a] bg-[#181b20]/95 px-2.5 py-1 text-[11px] text-[#9aa2b1] shadow-md">
-            <span className="font-medium text-[#e6e8ec]">3D Редактор (X / Y / Z)</span>
-            <span className="text-[#4a5260]">|</span>
+          <div className="flex flex-wrap items-center gap-2 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/95 px-2.5 py-1 text-[11px] text-[var(--mc-text-muted)] shadow-md">
+            <span className="font-medium text-[var(--mc-text)]">3D Редактор (X / Y / Z)</span>
+            <span className="text-[var(--mc-border-strong)]">|</span>
             <span>Элементов: {project.elements.length}</span>
             {displayedSingleSelected && (
               <>
-                <span className="text-[#4a5260]">|</span>
-                <span className="tabular-nums text-blue-300">
+                <span className="text-[var(--mc-border-strong)]">|</span>
+                <span className="tabular-nums text-[var(--mc-brand-inline)]">
                   Длина: {roundMm(getElementLengthMm(displayedSingleSelected))} мм
                 </span>
               </>
@@ -469,8 +472,8 @@ export default function SceneCanvas3D() {
 
           {/* Выбор цели 3D-манипулятора для одиночной трубы */}
           {singleSelectedElement && !isDrawingTool && (
-            <div className="flex items-center gap-1 rounded border border-[#2c313a] bg-[#181b20]/95 p-1 text-[11px] shadow-md">
-              <span className="px-1.5 text-[#9aa2b1]">Оси X/Y/Z:</span>
+            <div className="flex items-center gap-1 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/95 p-1 text-[11px] shadow-md">
+              <span className="px-1.5 text-[var(--mc-text-muted)]">Оси X/Y/Z:</span>
               {(
                 [
                   { id: "whole", label: "Весь элемент" },
@@ -484,8 +487,8 @@ export default function SceneCanvas3D() {
                   onClick={() => setManipulateTarget(mode.id)}
                   className={`rounded px-2 py-0.5 transition-colors ${
                     effectiveTarget === mode.id
-                      ? "bg-blue-600 text-white"
-                      : "text-[#9aa2b1] hover:bg-[#252a33] hover:text-white"
+                      ? "bg-[var(--mc-brand)] text-[var(--mc-brand-text)]"
+                      : "text-[var(--mc-text-muted)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
                   }`}
                 >
                   {mode.label}
@@ -496,9 +499,9 @@ export default function SceneCanvas3D() {
 
           {/* Панель рабочей плоскости для рисования в 3D */}
           {isDrawingTool && (
-            <div className="flex flex-wrap items-center gap-1.5 rounded border border-blue-500/40 bg-[#181b20]/95 px-2 py-1 text-[11px] shadow-md">
-              <Layers className="h-3.5 w-3.5 text-blue-400" />
-              <div className="flex items-center gap-0.5 rounded bg-[#121417] p-0.5">
+            <div className="flex flex-wrap items-center gap-1.5 rounded border border-[var(--mc-brand-border)] bg-[var(--mc-bg-panel)]/95 px-2 py-1 text-[11px] shadow-md">
+              <Layers className="h-3.5 w-3.5 text-[var(--mc-brand-inline)]" />
+              <div className="flex items-center gap-0.5 rounded bg-[var(--mc-bg-input)] p-0.5">
                 {WORK_PLANES.map((p) => (
                   <button
                     key={p.id}
@@ -509,19 +512,19 @@ export default function SceneCanvas3D() {
                     }}
                     className={`rounded px-1.5 py-0.5 transition-colors ${
                       workPlane === p.id
-                        ? "bg-blue-600 text-white"
-                        : "text-[#9aa2b1] hover:text-white"
+                        ? "bg-[var(--mc-brand)] text-[var(--mc-brand-text)]"
+                        : "text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
                     }`}
                   >
                     {p.label}
                   </button>
                 ))}
               </div>
-              <span className="text-[#9aa2b1]">{activePlaneMeta.axisLabel}=</span>
+              <span className="text-[var(--mc-text-muted)]">{activePlaneMeta.axisLabel}=</span>
               <button
                 type="button"
                 onClick={() => setPlaneOffsetMm((v) => v - stepMm)}
-                className="rounded border border-[#343a46] bg-[#22262d] px-1.5 py-0.5 text-[#e6e8ec] hover:bg-[#2c313a]"
+                className="rounded border border-[var(--mc-border-strong)] bg-[var(--mc-bg-elevated)] px-1.5 py-0.5 text-[var(--mc-text)] hover:bg-[var(--mc-bg-hover)]"
                 title={`Сдвинуть плоскость на -${stepMm} мм`}
               >
                 −
@@ -531,13 +534,13 @@ export default function SceneCanvas3D() {
                 step={stepMm}
                 value={planeOffsetMm}
                 onChange={(e) => setPlaneOffsetMm(Number(e.target.value) || 0)}
-                className="w-16 rounded border border-[#2c313a] bg-[#121417] px-1.5 py-0.5 text-center tabular-nums text-white outline-none focus:border-blue-500"
+                className="w-16 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-1.5 py-0.5 text-center tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-border)]"
               />
-              <span className="text-[#6c7484]">мм</span>
+              <span className="text-[var(--mc-text-subtle)]">мм</span>
               <button
                 type="button"
                 onClick={() => setPlaneOffsetMm((v) => v + stepMm)}
-                className="rounded border border-[#343a46] bg-[#22262d] px-1.5 py-0.5 text-[#e6e8ec] hover:bg-[#2c313a]"
+                className="rounded border border-[var(--mc-border-strong)] bg-[var(--mc-bg-elevated)] px-1.5 py-0.5 text-[var(--mc-text)] hover:bg-[var(--mc-bg-hover)]"
                 title={`Сдвинуть плоскость на +${stepMm} мм`}
               >
                 +
@@ -546,7 +549,7 @@ export default function SceneCanvas3D() {
                 <button
                   type="button"
                   onClick={handleAdoptLevelFromSelection}
-                  className="rounded border border-[#343a46] bg-[#22262d] px-1.5 py-0.5 text-[10px] text-blue-300 hover:bg-[#2c313a]"
+                  className="rounded border border-[var(--mc-border-strong)] bg-[var(--mc-bg-elevated)] px-1.5 py-0.5 text-[10px] text-[var(--mc-brand-inline)] hover:bg-[var(--mc-bg-hover)]"
                   title="Взять уровень плоскости от выделенного элемента"
                 >
                   От выдел.
@@ -558,8 +561,8 @@ export default function SceneCanvas3D() {
 
         {/* Управление камерой */}
         <div className="pointer-events-auto flex flex-wrap items-center gap-1.5">
-          <div className="flex items-center rounded border border-[#2c313a] bg-[#181b20]/95 p-0.5 shadow-md">
-            <Compass className="mx-1.5 h-3.5 w-3.5 text-[#9aa2b1]" />
+          <div className="flex items-center rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/95 p-0.5 shadow-md">
+            <Compass className="mx-1.5 h-3.5 w-3.5 text-[var(--mc-text-muted)]" />
             {CAMERA_PRESETS.map((preset) => (
               <button
                 key={preset.id}
@@ -570,8 +573,8 @@ export default function SceneCanvas3D() {
                 }}
                 className={`rounded px-2 py-1 text-[11px] transition-colors ${
                   cameraPreset === preset.id
-                    ? "bg-blue-600 text-white"
-                    : "text-[#9aa2b1] hover:text-white"
+                    ? "bg-[var(--mc-brand)] text-[var(--mc-brand-text)]"
+                    : "text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
                 }`}
               >
                 {preset.label}
@@ -579,11 +582,11 @@ export default function SceneCanvas3D() {
             ))}
           </div>
 
-          <div className="flex items-center rounded border border-[#2c313a] bg-[#181b20]/95 p-0.5 shadow-md">
+          <div className="flex items-center rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/95 p-0.5 shadow-md">
             <button
               type="button"
               onClick={() => triggerZoom(1)}
-              className="rounded p-1 text-[#c7cdd8] hover:bg-[#252a33]"
+              className="rounded p-1 text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
               title="Приблизить камеру"
             >
               <ZoomIn className="h-3.5 w-3.5" />
@@ -591,7 +594,7 @@ export default function SceneCanvas3D() {
             <button
               type="button"
               onClick={() => triggerZoom(-1)}
-              className="rounded p-1 text-[#c7cdd8] hover:bg-[#252a33]"
+              className="rounded p-1 text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
               title="Отдалить камеру"
             >
               <ZoomOut className="h-3.5 w-3.5" />
@@ -599,7 +602,7 @@ export default function SceneCanvas3D() {
             <button
               type="button"
               onClick={triggerReset}
-              className="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] text-[#c7cdd8] hover:bg-[#252a33]"
+              className="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
               title="Сбросить камеру на центр конструкции"
             >
               <RotateCcw className="h-3.5 w-3.5" />
@@ -611,20 +614,20 @@ export default function SceneCanvas3D() {
 
       {/* Индикатор живого перетаскивания или 3D-курсора */}
       {(dragPreview || (isDrawingTool && cursor3D)) && (
-        <div className="pointer-events-none absolute right-3 bottom-10 z-10 rounded border border-blue-500/40 bg-[#181b20]/95 px-2.5 py-1 text-[11px] tabular-nums text-[#e6e8ec] shadow-md">
+        <div className="pointer-events-none absolute right-3 bottom-10 z-10 rounded border border-[var(--mc-brand-border)] bg-[var(--mc-bg-panel)]/95 px-2.5 py-1 text-[11px] tabular-nums text-[var(--mc-text)] shadow-md">
           {dragPreview ? (
             <span>
               Сдвиг по{" "}
-              <strong className="uppercase text-blue-300">{dragPreview.axis}</strong>:{" "}
+              <strong className="uppercase text-[var(--mc-brand-inline)]">{dragPreview.axis}</strong>:{" "}
               {dragPreview.deltaMm[dragPreview.axis] >= 0 ? "+" : ""}
               {dragPreview.deltaMm[dragPreview.axis]} мм{" "}
-              <span className="text-[#9aa2b1]">(Alt — плавно)</span>
+              <span className="text-[var(--mc-text-muted)]">(Alt — плавно)</span>
             </span>
           ) : (
             cursor3D && (
               <span>
                 3D: X {cursor3D.point.x} · Y {cursor3D.point.y} · Z {cursor3D.point.z} мм{" "}
-                <span className="text-amber-300">
+                <span className="text-[var(--mc-warning-text)]">
                   [{cursor3D.snappedTo === "endpoint" ? "Вершина" : "Сетка"}]
                 </span>
               </span>
@@ -642,10 +645,12 @@ export default function SceneCanvas3D() {
           if (!isDrawingTool) clearSelection();
         }}
       >
-        <color attach="background" args={["#121417"]} />
+        <color attach="background" args={[palette.canvasBg3d]} />
 
-        <ambientLight intensity={0.65} />
-        <hemisphereLight args={["#dbeafe", "#1e293b", 0.45]} />
+        <ambientLight intensity={theme === "light" ? 0.78 : 0.65} />
+        <hemisphereLight
+          args={theme === "light" ? ["#fff7ed", "#7c6770", 0.55] : ["#f1dcc9", "#42313a", 0.45]}
+        />
         <directionalLight
           position={[5, 8, 5]}
           intensity={1.15}
@@ -670,21 +675,21 @@ export default function SceneCanvas3D() {
             args={[24, 24]}
             cellSize={Math.max(0.05, minorStepMm * 0.001)}
             cellThickness={0.5}
-            cellColor="#1e232b"
+            cellColor={palette.gridMinor3d}
             sectionSize={Math.max(0.1, majorStepMm * 0.001)}
             sectionThickness={1}
-            sectionColor="#333b48"
+            sectionColor={palette.gridMajor3d}
             fadeDistance={20}
             fadeStrength={1.2}
           />
         )}
 
-        {/* Оси координат модели в начале (0,0,0): X=красный, Y(2D)=зелёный, Z(высота)=синий */}
+        {/* Оси координат модели в начале (0,0,0): X, Y(2D), Z(высота) */}
         {showAxes && (
           <group>
-            <Line points={[[0, 0, 0], [0.9, 0, 0]]} color="#ef4444" lineWidth={2} />
-            <Line points={[[0, 0, 0], [0, 0, 0.9]]} color="#22c55e" lineWidth={2} />
-            <Line points={[[0, 0, 0], [0, 0.9, 0]]} color="#3b82f6" lineWidth={2} />
+            <Line points={[[0, 0, 0], [0.9, 0, 0]]} color={palette.axisX} lineWidth={2} />
+            <Line points={[[0, 0, 0], [0, 0, 0.9]]} color={palette.axisY} lineWidth={2} />
+            <Line points={[[0, 0, 0], [0, 0.9, 0]]} color={palette.axisZ} lineWidth={2} />
           </group>
         )}
 
@@ -720,9 +725,9 @@ export default function SceneCanvas3D() {
             >
               <planeGeometry args={[28, 28]} />
               <meshBasicMaterial
-                color="#2563eb"
+                color={palette.previewStroke}
                 transparent
-                opacity={workPlane === "xy" && planeOffsetMm === 0 ? 0 : 0.06}
+                opacity={workPlane === "xy" && planeOffsetMm === 0 ? 0 : 0.08}
                 side={THREE.DoubleSide}
                 depthWrite={false}
               />
@@ -769,7 +774,7 @@ export default function SceneCanvas3D() {
                 >
                   <sphereGeometry args={[isSelectedHandle ? 0.028 : 0.02, 16, 16]} />
                   <meshStandardMaterial
-                    color={isSelectedHandle ? "#ffffff" : handle.color}
+                    color={isSelectedHandle ? palette.selectionHighlight : handle.color}
                     emissive={handle.color}
                     emissiveIntensity={isSelectedHandle ? 0.7 : 0.35}
                   />
@@ -795,7 +800,7 @@ export default function SceneCanvas3D() {
           <mesh position={modelPointToScene(cursor3D.point)} raycast={() => null}>
             <sphereGeometry args={[0.022, 14, 14]} />
             <meshBasicMaterial
-              color={cursor3D.snappedTo === "endpoint" ? "#fbbf24" : "#38bdf8"}
+              color={cursor3D.snappedTo === "endpoint" ? palette.jointFill : palette.previewStroke}
             />
           </mesh>
         )}
@@ -806,7 +811,7 @@ export default function SceneCanvas3D() {
           </mesh>
         )}
         {previewSegments.map(([pA, pB], idx) => (
-          <Line key={idx} points={[pA, pB]} color="#60a5fa" lineWidth={2.5} dashed />
+          <Line key={idx} points={[pA, pB]} color={palette.previewStroke} lineWidth={2.5} dashed />
         ))}
 
         {/* Маркеры узлов соединений */}
@@ -825,8 +830,8 @@ export default function SceneCanvas3D() {
               >
                 <sphereGeometry args={[isSelectedJoint ? 0.024 : 0.015, 14, 14]} />
                 <meshStandardMaterial
-                  color={isSelectedJoint ? "#ffffff" : "#fbbf24"}
-                  emissive={isSelectedJoint ? "#3b82f6" : "#b45309"}
+                  color={isSelectedJoint ? palette.jointSelectedFill : palette.jointFill}
+                  emissive={isSelectedJoint ? palette.previewStroke : "#b45309"}
                   emissiveIntensity={0.5}
                 />
               </mesh>
@@ -835,13 +840,13 @@ export default function SceneCanvas3D() {
       </Canvas>
 
       {/* Подсказка по управлению в 3D */}
-      <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap items-center gap-2 rounded border border-[#2c313a] bg-[#181b20]/90 px-2.5 py-1 text-[11px] text-[#9aa2b1]">
+      <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap items-center gap-2 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/90 px-2.5 py-1 text-[11px] text-[var(--mc-text-muted)]">
         <span>
-          <strong className="text-red-400">X</strong>{" "}
-          <strong className="text-emerald-400">Y</strong>{" "}
-          <strong className="text-blue-400">Z</strong> — стрелки для перемещения в 3D
+          <strong style={{ color: palette.axisXText }}>X</strong>{" "}
+          <strong style={{ color: palette.axisYText }}>Y</strong>{" "}
+          <strong style={{ color: palette.axisZText }}>Z</strong> — стрелки для перемещения в 3D
         </span>
-        <span className="text-[#4a5260]">·</span>
+        <span className="text-[var(--mc-border-strong)]">·</span>
         <span>Клик по точке на трубе — тянуть конец · ЛКМ — вращение · ПКМ — панорама</span>
       </div>
     </div>

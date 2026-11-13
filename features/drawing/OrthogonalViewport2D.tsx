@@ -19,6 +19,7 @@ import {
 } from "@/lib/geometry/snapping";
 import { buildRectangleSegments3D } from "@/lib/geometry/snapping3d";
 import { useProjectStore } from "@/store/useProjectStore";
+import { CANVAS_PALETTES, useThemeStore, type CanvasThemePalette } from "@/store/useThemeStore";
 import type { ConstructionElement, MaterialProfile, Point2D, Point3D } from "@/types";
 
 const BASE_PX_PER_MM = 0.4;
@@ -76,7 +77,10 @@ function clampZoomFactor(value: number): number {
   return Math.max(MIN_ZOOM_FACTOR, Math.min(MAX_ZOOM_FACTOR, value));
 }
 
-function niceAxisLabels(plane: OrthoPlane): {
+function niceAxisLabels(
+  plane: OrthoPlane,
+  palette: CanvasThemePalette
+): {
   uLabel: string;
   uStroke: string;
   uText: string;
@@ -87,30 +91,30 @@ function niceAxisLabels(plane: OrthoPlane): {
   if (plane === "xz") {
     return {
       uLabel: "X",
-      uStroke: "#7f1d1d",
-      uText: "#f87171",
+      uStroke: palette.axisX,
+      uText: palette.axisXText,
       vLabel: "Z (высота)",
-      vStroke: "#1d4ed8",
-      vText: "#60a5fa",
+      vStroke: palette.axisZ,
+      vText: palette.axisZText,
     };
   }
   if (plane === "yz") {
     return {
       uLabel: "Y",
-      uStroke: "#14532d",
-      uText: "#4ade80",
+      uStroke: palette.axisY,
+      uText: palette.axisYText,
       vLabel: "Z (высота)",
-      vStroke: "#1d4ed8",
-      vText: "#60a5fa",
+      vStroke: palette.axisZ,
+      vText: palette.axisZText,
     };
   }
   return {
     uLabel: "X",
-    uStroke: "#7f1d1d",
-    uText: "#f87171",
+    uStroke: palette.axisX,
+    uText: palette.axisXText,
     vLabel: "Y",
-    vStroke: "#14532d",
-    vText: "#4ade80",
+    vStroke: palette.axisY,
+    vText: palette.axisYText,
   };
 }
 
@@ -151,6 +155,8 @@ export const OrthogonalViewport2D = forwardRef<
   const activeProfileId = useProjectStore((s) => s.activeProfileId);
   const selectedElementIds = useProjectStore((s) => s.selectedElementIds);
   const selectedJointId = useProjectStore((s) => s.selectedJointId);
+  const theme = useThemeStore((s) => s.theme);
+  const palette = CANVAS_PALETTES[theme];
 
   const setActiveTool = useProjectStore((s) => s.setActiveTool);
   const selectElement = useProjectStore((s) => s.selectElement);
@@ -828,7 +834,7 @@ export const OrthogonalViewport2D = forwardRef<
   }, [elements, gridSettings.snapEnabled, gridSettings.snapToIntersections, plane]);
 
   const originScreen = worldToScreen({ x: 0, y: 0 });
-  const axisMeta = niceAxisLabels(plane);
+  const axisMeta = niceAxisLabels(plane, palette);
 
   const canvasCursor = useMemo(() => {
     if (dragAction?.kind === "pan") return "grabbing";
@@ -855,9 +861,11 @@ export const OrthogonalViewport2D = forwardRef<
       ref={containerRef}
       data-testid={`viewport-${plane}`}
       onMouseDown={onFocus}
-      style={{ cursor: canvasCursor }}
-      className={`relative h-full w-full overflow-hidden select-none bg-[#121417] transition-shadow ${
-        isFocused ? "ring-1 ring-inset ring-blue-500/70" : "ring-1 ring-inset ring-[#2c313a]"
+      style={{ cursor: canvasCursor, backgroundColor: palette.canvasBg }}
+      className={`relative h-full w-full overflow-hidden select-none transition-shadow ${
+        isFocused
+          ? "ring-1 ring-inset ring-[var(--mc-brand-border)]"
+          : "ring-1 ring-inset ring-[var(--mc-border)]"
       }`}
     >
       {/* Заголовок вида и кнопки масштабирования */}
@@ -865,17 +873,19 @@ export const OrthogonalViewport2D = forwardRef<
         <div
           className={`pointer-events-auto flex items-center gap-1.5 rounded border px-2 py-1 text-[11px] shadow-md ${
             isFocused
-              ? "border-blue-500/60 bg-[#181b20]/95 text-[#e6e8ec]"
-              : "border-[#2c313a] bg-[#181b20]/95 text-[#9aa2b1]"
+              ? "border-[var(--mc-brand-border)] bg-[var(--mc-bg-panel)]/95 text-[var(--mc-text)]"
+              : "border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/95 text-[var(--mc-text-muted)]"
           }`}
         >
-          <span className="font-semibold text-[#e6e8ec]">{title}</span>
+          <span className="font-semibold text-[var(--mc-text)]">{title}</span>
           {subtitle && (
-            <span className="hidden text-[10px] text-[#9aa2b1] sm:inline">· {subtitle}</span>
+            <span className="hidden text-[10px] text-[var(--mc-text-muted)] sm:inline">
+              · {subtitle}
+            </span>
           )}
         </div>
 
-        <div className="pointer-events-auto flex items-center rounded border border-[#2c313a] bg-[#181b20]/95 p-0.5 shadow-md">
+        <div className="pointer-events-auto flex items-center rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/95 p-0.5 shadow-md">
           <button
             type="button"
             onClick={(e) => {
@@ -883,12 +893,12 @@ export const OrthogonalViewport2D = forwardRef<
               onFocus();
               updateZoom(zoomFactor / 1.15);
             }}
-            className="rounded p-1 text-[#c7cdd8] hover:bg-[#252a33]"
+            className="rounded p-1 text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
             title="Уменьшить масштаб"
           >
             <ZoomOut className="h-3.5 w-3.5" />
           </button>
-          <span className="min-w-10 text-center text-[11px] tabular-nums text-[#e6e8ec]">
+          <span className="min-w-10 text-center text-[11px] tabular-nums text-[var(--mc-text)]">
             {Math.round(zoomFactor * 100)}%
           </span>
           <button
@@ -898,7 +908,7 @@ export const OrthogonalViewport2D = forwardRef<
               onFocus();
               updateZoom(zoomFactor * 1.15);
             }}
-            className="rounded p-1 text-[#c7cdd8] hover:bg-[#252a33]"
+            className="rounded p-1 text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
             title="Увеличить масштаб"
           >
             <ZoomIn className="h-3.5 w-3.5" />
@@ -911,7 +921,7 @@ export const OrthogonalViewport2D = forwardRef<
               fitToScreen();
             }}
             title="Поместить конструкцию в этот вид"
-            className="rounded p-1 text-[#c7cdd8] hover:bg-[#252a33]"
+            className="rounded p-1 text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
           >
             <Maximize2 className="h-3.5 w-3.5" />
           </button>
@@ -928,7 +938,7 @@ export const OrthogonalViewport2D = forwardRef<
               );
             }}
             title="Сбросить вид (100%)"
-            className="rounded p-1 text-[#c7cdd8] hover:bg-[#252a33]"
+            className="rounded p-1 text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
           >
             <RotateCcw className="h-3.5 w-3.5" />
           </button>
@@ -952,7 +962,7 @@ export const OrthogonalViewport2D = forwardRef<
             <Line
               key={`min-${idx}`}
               points={line.points}
-              stroke="#1b1f26"
+              stroke={palette.gridMinor}
               strokeWidth={1}
             />
           ))}
@@ -960,7 +970,7 @@ export const OrthogonalViewport2D = forwardRef<
             <Line
               key={`maj-${idx}`}
               points={line.points}
-              stroke="#282d37"
+              stroke={palette.gridMajor}
               strokeWidth={1}
             />
           ))}
@@ -983,7 +993,7 @@ export const OrthogonalViewport2D = forwardRef<
                 x={originScreen.x}
                 y={originScreen.y}
                 radius={3.5}
-                fill="#60a5fa"
+                fill={palette.originDot}
               />
               <Text
                 x={Math.min(size.width - 70, Math.max(8, originScreen.x + 8))}
@@ -1064,10 +1074,10 @@ export const OrthogonalViewport2D = forwardRef<
 
             const beamColor =
               activeTool === "delete" && isHovered
-                ? "#ef4444"
+                ? "#dc2626"
                 : displaySettings.showProfileColors
-                  ? (element.color ?? profile?.color ?? "#38bdf8")
-                  : "#94a3b8";
+                  ? (element.color ?? profile?.color ?? palette.beamFallback)
+                  : palette.beamFallback;
 
             const isVerticalToView = projectedPx < 3 && lengthMm >= 1;
             const showLengthBadge =
@@ -1083,8 +1093,8 @@ export const OrthogonalViewport2D = forwardRef<
                 {(isSelected || isHovered) && !isVerticalToView && (
                   <Line
                     points={[s.x, s.y, e.x, e.y]}
-                    stroke="#ffffff"
-                    opacity={isSelected ? 0.75 : 0.25}
+                    stroke={palette.selectionHighlight}
+                    opacity={isSelected ? 0.78 : 0.28}
                     strokeWidth={strokeWidthPx + 4}
                     lineCap="butt"
                   />
@@ -1097,7 +1107,7 @@ export const OrthogonalViewport2D = forwardRef<
                         x={s.x}
                         y={s.y}
                         radius={Math.max(8, strokeWidthPx * 0.9)}
-                        stroke="#ffffff"
+                        stroke={palette.selectionHighlight}
                         strokeWidth={2}
                       />
                     )}
@@ -1108,7 +1118,7 @@ export const OrthogonalViewport2D = forwardRef<
                       height={Math.max(8, strokeWidthPx * 1.1)}
                       cornerRadius={2}
                       fill={beamColor}
-                      stroke={isSelected ? "#ffffff" : "#0b0d10"}
+                      stroke={isSelected ? palette.selectionHighlight : palette.beamCenterline}
                       strokeWidth={1.2}
                     />
                   </Group>
@@ -1122,7 +1132,7 @@ export const OrthogonalViewport2D = forwardRef<
                     />
                     <Line
                       points={[s.x, s.y, e.x, e.y]}
-                      stroke="#0b0d10"
+                      stroke={palette.beamCenterline}
                       strokeWidth={1}
                       dash={[4, 3]}
                       opacity={0.55}
@@ -1141,16 +1151,16 @@ export const OrthogonalViewport2D = forwardRef<
                       width={labelWidth}
                       height={15}
                       cornerRadius={3}
-                      fill="#141619"
+                      fill={palette.badgeBg}
                       stroke={
                         isSelected
-                          ? "#60a5fa"
+                          ? palette.badgeSelectedBorder
                           : element.groupId
-                            ? "#38bdf8"
-                            : "#2c313a"
+                            ? palette.previewStroke
+                            : palette.badgeBorder
                       }
                       strokeWidth={0.9}
-                      opacity={0.9}
+                      opacity={0.94}
                     />
                     <Text
                       x={-labelWidth / 2}
@@ -1160,7 +1170,7 @@ export const OrthogonalViewport2D = forwardRef<
                       text={labelText}
                       fontSize={9.5}
                       fontFamily="monospace"
-                      fill="#e6e8ec"
+                      fill={palette.badgeText}
                     />
                   </Group>
                 )}
@@ -1203,7 +1213,7 @@ export const OrthogonalViewport2D = forwardRef<
                   <Line
                     key={`copy-preview-${el.id}`}
                     points={[s.x, s.y, e.x, e.y]}
-                    stroke="#0ea5e9"
+                    stroke={palette.previewStroke}
                     strokeWidth={4}
                     dash={[6, 4]}
                   />
@@ -1238,16 +1248,16 @@ export const OrthogonalViewport2D = forwardRef<
                       x={s.x}
                       y={s.y}
                       radius={5}
-                      fill="#3b82f6"
-                      stroke="#ffffff"
+                      fill={palette.previewStroke}
+                      stroke={palette.selectionHighlight}
                       strokeWidth={1.6}
                     />
                     <Circle
                       x={e.x}
                       y={e.y}
                       radius={5}
-                      fill="#3b82f6"
-                      stroke="#ffffff"
+                      fill={palette.previewStroke}
+                      stroke={palette.selectionHighlight}
                       strokeWidth={1.6}
                     />
                   </Group>
@@ -1265,8 +1275,8 @@ export const OrthogonalViewport2D = forwardRef<
                   x={p.x}
                   y={p.y}
                   radius={isSelectedJoint ? 6.5 : 4.5}
-                  fill={isSelectedJoint ? "#ffffff" : "#fbbf24"}
-                  stroke={isSelectedJoint ? "#3b82f6" : "#141619"}
+                  fill={isSelectedJoint ? palette.jointSelectedFill : palette.jointFill}
+                  stroke={isSelectedJoint ? palette.previewStroke : palette.jointStroke}
                   strokeWidth={1.5}
                   onClick={(evt) => {
                     evt.cancelBubble = true;
@@ -1286,8 +1296,8 @@ export const OrthogonalViewport2D = forwardRef<
                 x={p.x}
                 y={p.y}
                 radius={2.2}
-                fill="#38bdf8"
-                opacity={0.45}
+                fill={palette.previewStroke}
+                opacity={0.5}
                 listening={false}
               />
             );
@@ -1318,18 +1328,18 @@ export const OrthogonalViewport2D = forwardRef<
               <Group>
                 <Line
                   points={[s.x, s.y, e.x, e.y]}
-                  stroke="#2563eb"
+                  stroke={palette.previewStroke}
                   strokeWidth={3}
                   dash={[8, 4]}
                 />
-                <Circle x={s.x} y={s.y} radius={4} fill="#2563eb" />
+                <Circle x={s.x} y={s.y} radius={4} fill={palette.previewStroke} />
                 <Rect
                   x={(s.x + e.x) / 2 - 44}
                   y={(s.y + e.y) / 2 - 22}
                   width={88}
                   height={18}
                   cornerRadius={4}
-                  fill="#1d4ed8"
+                  fill={palette.previewFill}
                 />
                 <Text
                   x={(s.x + e.x) / 2 - 44}
@@ -1339,7 +1349,7 @@ export const OrthogonalViewport2D = forwardRef<
                   text={text}
                   fontSize={10}
                   fontStyle="bold"
-                  fill="#ffffff"
+                  fill={palette.previewText}
                 />
               </Group>
             );
@@ -1365,7 +1375,7 @@ export const OrthogonalViewport2D = forwardRef<
               <Group>
                 <Line
                   points={[s.x, s.y, e.x, e.y]}
-                  stroke="#2563eb"
+                  stroke={palette.previewStroke}
                   strokeWidth={3}
                   dash={[8, 4]}
                 />
@@ -1377,7 +1387,7 @@ export const OrthogonalViewport2D = forwardRef<
                       x={sp.x}
                       y={sp.y}
                       radius={4}
-                      fill="#2563eb"
+                      fill={palette.previewStroke}
                     />
                   );
                 })}
@@ -1387,7 +1397,7 @@ export const OrthogonalViewport2D = forwardRef<
                   width={84}
                   height={18}
                   cornerRadius={4}
-                  fill="#1d4ed8"
+                  fill={palette.previewFill}
                 />
                 <Text
                   x={(s.x + e.x) / 2 - 42}
@@ -1397,7 +1407,7 @@ export const OrthogonalViewport2D = forwardRef<
                   text={`${lenMm} мм`}
                   fontSize={10}
                   fontStyle="bold"
-                  fill="#ffffff"
+                  fill={palette.previewText}
                 />
               </Group>
             );
@@ -1421,10 +1431,10 @@ export const OrthogonalViewport2D = forwardRef<
                   y={minY}
                   width={widthPx}
                   height={heightPx}
-                  stroke="#2563eb"
+                  stroke={palette.previewStroke}
                   strokeWidth={2.5}
                   dash={[6, 4]}
-                  fill="rgba(37, 99, 235, 0.08)"
+                  fill={palette.marqueeFill}
                 />
                 <Rect
                   x={minX + widthPx / 2 - 58}
@@ -1432,7 +1442,7 @@ export const OrthogonalViewport2D = forwardRef<
                   width={116}
                   height={18}
                   cornerRadius={4}
-                  fill="#1d4ed8"
+                  fill={palette.previewFill}
                 />
                 <Text
                   x={minX + widthPx / 2 - 58}
@@ -1442,7 +1452,7 @@ export const OrthogonalViewport2D = forwardRef<
                   text={`${wMm} × ${hMm} мм`}
                   fontSize={10}
                   fontStyle="bold"
-                  fill="#ffffff"
+                  fill={palette.previewText}
                 />
               </Group>
             );
@@ -1458,10 +1468,10 @@ export const OrthogonalViewport2D = forwardRef<
                 y={Math.min(p1.y, p2.y)}
                 width={Math.abs(p2.x - p1.x)}
                 height={Math.abs(p2.y - p1.y)}
-                stroke="#2563eb"
+                stroke={palette.previewStroke}
                 strokeWidth={1.2}
                 dash={[4, 3]}
-                fill="rgba(37, 99, 235, 0.1)"
+                fill={palette.marqueeFill}
               />
             );
           })()}
@@ -1475,10 +1485,10 @@ export const OrthogonalViewport2D = forwardRef<
                 snapInfo.snapType === "endpoint"
                   ? "#22c55e"
                   : snapInfo.snapType === "intersection"
-                    ? "#38bdf8"
+                    ? palette.previewStroke
                     : snapInfo.snapType === "angle"
                       ? "#a855f7"
-                      : "#9aa2b1";
+                      : palette.gridText;
               return (
                 <Group>
                   <Circle
@@ -1498,23 +1508,23 @@ export const OrthogonalViewport2D = forwardRef<
 
       {/* Нижняя строка состояния вида */}
       <div className="pointer-events-none absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between gap-2 text-[11px]">
-        <div className="rounded border border-[#2c313a] bg-[#181b20]/95 px-2 py-0.5 text-[#9aa2b1] shadow-md tabular-nums">
-          <span className="text-[#e6e8ec]">{axisCoordText}</span>
+        <div className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/95 px-2 py-0.5 text-[var(--mc-text-muted)] shadow-md tabular-nums">
+          <span className="text-[var(--mc-text)]">{axisCoordText}</span>
           {snapInfo?.snapType === "endpoint" && (
-            <span className="ml-1.5 font-medium text-emerald-400">· Вершина 3D</span>
+            <span className="ml-1.5 font-medium text-[var(--mc-success-text)]">· Вершина 3D</span>
           )}
           {snapInfo?.snapType === "intersection" && (
-            <span className="ml-1.5 font-medium text-sky-400">· Пересечение</span>
+            <span className="ml-1.5 font-medium text-[var(--mc-brand-inline)]">· Пересечение</span>
           )}
           {snapInfo?.snapType === "angle" && (
-            <span className="ml-1.5 font-medium text-purple-400">
+            <span className="ml-1.5 font-medium text-[var(--mc-warning-text)]">
               · {snapInfo.angleDeg}°
             </span>
           )}
         </div>
 
         {dragAction?.kind === "move" && (
-          <div className="rounded border border-blue-500/60 bg-blue-600/20 px-2 py-0.5 font-medium text-blue-200 shadow-md tabular-nums">
+          <div className="rounded border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] px-2 py-0.5 font-medium text-[var(--mc-text)] shadow-md tabular-nums">
             {dragAction.copyMode ? "Копирование: " : "Сдвиг: "}
             {getPreviewOffsetLabel(dragAction.deltaMm, plane)}
           </div>

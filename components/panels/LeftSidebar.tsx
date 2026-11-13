@@ -116,10 +116,10 @@ export function LeftSidebar() {
 
   return (
     <>
-      <aside className="flex w-72 shrink-0 flex-col border-r border-[#2c313a] bg-[#181b20] overflow-y-auto">
+      <aside className="flex w-72 shrink-0 flex-col border-r border-[var(--mc-border)] bg-[var(--mc-bg-panel)] overflow-y-auto">
         {/* Секция 1: Инструменты черчения */}
-        <section className="border-b border-[#2c313a] p-3">
-          <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#9aa2b1]">
+        <section className="border-b border-[var(--mc-border)] p-3">
+          <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-text-muted)]">
             Инструменты черчения
           </h2>
           <div className="grid grid-cols-4 gap-1.5">
@@ -133,8 +133,8 @@ export function LeftSidebar() {
                   onClick={() => setActiveTool(tool.id)}
                   className={`flex flex-col items-center justify-center gap-1 rounded border px-1 py-2 text-[10px] transition-colors ${
                     isActive
-                      ? "border-blue-500 bg-blue-600/20 text-blue-300"
-                      : "border-[#2c313a] bg-[#141619] text-[#9aa2b1] hover:border-[#3c4350] hover:text-white"
+                      ? "border-[var(--mc-brand-light)] bg-[var(--mc-brand)] text-[var(--mc-brand-text)] shadow-xs"
+                      : "border-[var(--mc-border)] bg-[var(--mc-bg-app)] text-[var(--mc-text-muted)] hover:border-[var(--mc-border-strong)] hover:text-[var(--mc-text)]"
                   }`}
                   title={tool.label}
                 >
@@ -147,16 +147,16 @@ export function LeftSidebar() {
         </section>
 
         {/* Секция 2: Каталог профильных труб */}
-        <section className="border-b border-[#2c313a] p-3">
+        <section className="border-b border-[var(--mc-border)] p-3">
           <div className="mb-2 flex items-center justify-between gap-1">
-            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[#9aa2b1]">
+            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-text-muted)]">
               Каталог профилей
             </h2>
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={openCatalogForNew}
-                className="inline-flex items-center gap-1 rounded bg-[#22262d] px-2 py-0.5 text-[11px] text-[#e6e8ec] hover:bg-[#2c313a]"
+                className="inline-flex items-center gap-1 rounded bg-[var(--mc-bg-elevated)] px-2 py-0.5 text-[11px] text-[var(--mc-text)] hover:bg-[var(--mc-bg-hover)]"
                 title="Открыть расширенный каталог и управление профилями"
               >
                 <SlidersHorizontal className="h-3 w-3" />
@@ -165,7 +165,7 @@ export function LeftSidebar() {
               <button
                 type="button"
                 onClick={openCatalogForNew}
-                className="inline-flex items-center rounded bg-blue-600/20 px-1.5 py-0.5 text-[11px] text-blue-300 hover:bg-blue-600/30"
+                className="inline-flex items-center rounded bg-[var(--mc-brand-soft)] px-1.5 py-0.5 text-[11px] text-[var(--mc-brand-inline)] hover:bg-[var(--mc-brand)] hover:text-[var(--mc-brand-text)]"
                 title="Создать новый профиль"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -174,13 +174,13 @@ export function LeftSidebar() {
           </div>
 
           <div className="relative mb-2">
-            <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6c7484]" />
+            <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--mc-text-subtle)]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Поиск по размеру..."
-              className="w-full rounded border border-[#2c313a] bg-[#121417] py-1.5 pl-7 pr-2 text-xs text-[#e6e8ec] placeholder-[#6c7484] outline-none focus:border-blue-500"
+              className="w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] py-1.5 pl-7 pr-2 text-xs text-[var(--mc-text)] placeholder-[var(--mc-text-subtle)] outline-none focus:border-[var(--mc-brand-light)]"
             />
           </div>
 
@@ -199,8 +199,8 @@ export function LeftSidebar() {
                 onClick={() => setShapeFilter(f.id)}
                 className={`rounded border py-1 text-[10px] transition-colors ${
                   shapeFilter === f.id
-                    ? "border-blue-500/50 bg-blue-600/20 text-blue-200"
-                    : "border-[#2c313a] bg-[#141619] text-[#9aa2b1] hover:text-white"
+                    ? "border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] font-medium text-[var(--mc-brand-inline)]"
+                    : "border-[var(--mc-border)] bg-[var(--mc-bg-app)] text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
                 }`}
               >
                 {f.label}
@@ -210,7 +210,7 @@ export function LeftSidebar() {
 
           <div className="space-y-1 max-h-56 overflow-y-auto pr-0.5">
             {filteredProfiles.length === 0 ? (
-              <div className="py-3 text-center text-[11px] text-[#6c7484]">
+              <div className="py-3 text-center text-[11px] text-[var(--mc-text-subtle)]">
                 Профили не найдены
               </div>
             ) : (
@@ -221,8 +221,8 @@ export function LeftSidebar() {
                     key={profile.id}
                     className={`group flex items-center justify-between rounded border px-2 py-1.5 transition-colors ${
                       isSelected
-                        ? "border-blue-500/80 bg-blue-600/15"
-                        : "border-[#262a32] bg-[#141619] hover:border-[#3c4350]"
+                        ? "border-[var(--mc-brand-light)] bg-[var(--mc-brand-soft)]"
+                        : "border-[var(--mc-border)] bg-[var(--mc-bg-app)] hover:border-[var(--mc-border-strong)]"
                     }`}
                   >
                     <button
@@ -235,10 +235,10 @@ export function LeftSidebar() {
                         style={{ backgroundColor: profile.color }}
                       />
                       <div className="min-w-0">
-                        <div className="truncate text-xs font-medium text-[#e6e8ec]">
+                        <div className="truncate text-xs font-medium text-[var(--mc-text)]">
                           {profile.name}
                         </div>
-                        <div className="text-[10px] text-[#9aa2b1]">
+                        <div className="text-[10px] text-[var(--mc-text-muted)]">
                           {formatProfileDimensions(profile)}
                         </div>
                       </div>
@@ -246,17 +246,17 @@ export function LeftSidebar() {
 
                     <div className="flex items-center gap-1.5 shrink-0 pl-1">
                       <div className="text-right">
-                        <div className="text-xs font-medium tabular-nums text-[#e6e8ec]">
+                        <div className="text-xs font-medium tabular-nums text-[var(--mc-text)]">
                           {formatMoney(profile.pricePerMeter, project.calculationSettings.currency)}/м
                         </div>
                         {profile.isExample && (
-                          <div className="text-[9px] text-amber-300/80">пример</div>
+                          <div className="text-[9px] text-[var(--mc-warning-text)] opacity-85">пример</div>
                         )}
                       </div>
                       <button
                         type="button"
                         onClick={() => openCatalogForEdit(profile.id)}
-                        className="rounded p-1 text-[#6c7484] hover:bg-[#252a33] hover:text-white"
+                        className="rounded p-1 text-[var(--mc-text-subtle)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
                         title="Редактировать профиль"
                       >
                         <Pencil className="h-3 w-3" />
@@ -272,7 +272,7 @@ export function LeftSidebar() {
             <button
               type="button"
               onClick={() => assignProfileToElements(selectedElementIds, activeProfileId)}
-              className="mt-2 w-full rounded border border-blue-500/40 bg-blue-600/15 py-1.5 text-[11px] font-medium text-blue-200 hover:bg-blue-600/25"
+              className="mt-2 w-full rounded border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] py-1.5 text-[11px] font-medium text-[var(--mc-brand-inline)] hover:bg-[var(--mc-brand)] hover:text-[var(--mc-brand-text)]"
             >
               Назначить активный профиль выбранным ({selectedElementIds.length})
             </button>
@@ -280,74 +280,74 @@ export function LeftSidebar() {
         </section>
 
         {/* Секция 3: Быстрое построение элемента по координатам */}
-        <section className="border-b border-[#2c313a] p-3">
+        <section className="border-b border-[var(--mc-border)] p-3">
           <div className="mb-2 flex items-center gap-1.5">
-            <PencilLine className="h-3.5 w-3.5 text-blue-400" />
-            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[#9aa2b1]">
+            <PencilLine className="h-3.5 w-3.5 text-[var(--mc-brand-light)]" />
+            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-text-muted)]">
               Добавить элемент (мм)
             </h2>
           </div>
           <form onSubmit={handleAddBeam} className="space-y-2">
             <div className="grid grid-cols-3 gap-1.5">
-              <label className="text-[10px] text-[#9aa2b1]">
+              <label className="text-[10px] text-[var(--mc-text-muted)]">
                 Нач. X
                 <input
                   type="number"
                   value={x1}
                   onChange={(e) => setX1(e.target.value)}
-                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+                  className="mt-0.5 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-1.5 py-1 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
                 />
               </label>
-              <label className="text-[10px] text-[#9aa2b1]">
+              <label className="text-[10px] text-[var(--mc-text-muted)]">
                 Нач. Y
                 <input
                   type="number"
                   value={y1}
                   onChange={(e) => setY1(e.target.value)}
-                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+                  className="mt-0.5 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-1.5 py-1 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
                 />
               </label>
-              <label className="text-[10px] text-[#9aa2b1]">
+              <label className="text-[10px] text-[var(--mc-text-muted)]">
                 Нач. Z
                 <input
                   type="number"
                   value={z1}
                   onChange={(e) => setZ1(e.target.value)}
-                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+                  className="mt-0.5 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-1.5 py-1 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
                 />
               </label>
-              <label className="text-[10px] text-[#9aa2b1]">
+              <label className="text-[10px] text-[var(--mc-text-muted)]">
                 Кон. X
                 <input
                   type="number"
                   value={x2}
                   onChange={(e) => setX2(e.target.value)}
-                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+                  className="mt-0.5 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-1.5 py-1 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
                 />
               </label>
-              <label className="text-[10px] text-[#9aa2b1]">
+              <label className="text-[10px] text-[var(--mc-text-muted)]">
                 Кон. Y
                 <input
                   type="number"
                   value={y2}
                   onChange={(e) => setY2(e.target.value)}
-                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+                  className="mt-0.5 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-1.5 py-1 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
                 />
               </label>
-              <label className="text-[10px] text-[#9aa2b1]">
+              <label className="text-[10px] text-[var(--mc-text-muted)]">
                 Кон. Z
                 <input
                   type="number"
                   value={z2}
                   onChange={(e) => setZ2(e.target.value)}
-                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+                  className="mt-0.5 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-1.5 py-1 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
                 />
               </label>
             </div>
-            {beamError && <div className="text-[11px] text-rose-400">{beamError}</div>}
+            {beamError && <div className="text-[11px] text-[var(--mc-danger-text)]">{beamError}</div>}
             <button
               type="submit"
-              className="w-full rounded bg-[#252a33] py-1.5 text-xs font-medium text-[#e6e8ec] hover:bg-blue-600 hover:text-white transition-colors"
+              className="w-full rounded border border-[var(--mc-brand-border)] bg-[var(--mc-bg-elevated)] py-1.5 text-xs font-medium text-[var(--mc-text)] hover:bg-[var(--mc-brand)] hover:text-[var(--mc-brand-text)] transition-colors"
             >
               + Построить по координатам
             </button>
@@ -357,29 +357,29 @@ export function LeftSidebar() {
         {/* Секция 4: Используемые материалы в проекте */}
         <section className="p-3">
           <div className="mb-2 flex items-center gap-1.5">
-            <Layers className="h-3.5 w-3.5 text-[#9aa2b1]" />
-            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[#9aa2b1]">
+            <Layers className="h-3.5 w-3.5 text-[var(--mc-text-muted)]" />
+            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-text-muted)]">
               Используемые материалы
             </h2>
           </div>
 
           {estimate.profileItems.length === 0 ? (
-            <p className="text-xs text-[#6c7484]">Нет элементов в конструкции.</p>
+            <p className="text-xs text-[var(--mc-text-subtle)]">Нет элементов в конструкции.</p>
           ) : (
             <ul className="space-y-1.5">
               {estimate.profileItems.map((item) => (
                 <li
                   key={item.profileId}
-                  className="flex items-center justify-between rounded border border-[#262a32] bg-[#141619] px-2 py-1.5 text-xs"
+                  className="flex items-center justify-between rounded border border-[var(--mc-border)] bg-[var(--mc-bg-app)] px-2 py-1.5 text-xs"
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <span
                       className="h-2.5 w-2.5 shrink-0 rounded-xs"
                       style={{ backgroundColor: item.color }}
                     />
-                    <span className="truncate text-[#e6e8ec]">{item.profileName}</span>
+                    <span className="truncate text-[var(--mc-text)]">{item.profileName}</span>
                   </div>
-                  <span className="shrink-0 tabular-nums text-[#9aa2b1]">
+                  <span className="shrink-0 tabular-nums text-[var(--mc-text-muted)]">
                     {item.totalLengthMeters.toFixed(2)} м
                   </span>
                 </li>

@@ -91,16 +91,16 @@ export function EstimateModal({ open, onClose }: EstimateModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs">
-      <div className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-[#343a46] bg-[#1b1e23] shadow-2xl">
-        <div className="flex items-center justify-between border-b border-[#2c313a] px-4 py-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-xs">
+      <div className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-[var(--mc-border-strong)] bg-[var(--mc-bg-panel)] shadow-2xl">
+        <div className="flex items-center justify-between border-b border-[var(--mc-border)] px-4 py-3">
           <div className="flex items-center gap-2">
-            <FileSpreadsheet className="h-4 w-4 text-blue-400" />
-            <h2 className="text-sm font-semibold text-[#e6e8ec]">
+            <FileSpreadsheet className="h-4 w-4 text-[var(--mc-brand-light)]" />
+            <h2 className="text-sm font-semibold text-[var(--mc-text)]">
               Спецификация и смета — {project.name}
             </h2>
             {project.isExample && (
-              <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-medium text-amber-300">
+              <span className="rounded bg-[var(--mc-brand-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--mc-brand-inline)]">
                 Примерные цены
               </span>
             )}
@@ -108,7 +108,7 @@ export function EstimateModal({ open, onClose }: EstimateModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1 text-[#9aa2b1] hover:bg-[#2a2f38] hover:text-white"
+            className="rounded p-1 text-[var(--mc-text-muted)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
             aria-label="Закрыть окно сметы"
           >
             <X className="h-4 w-4" />
@@ -116,37 +116,37 @@ export function EstimateModal({ open, onClose }: EstimateModalProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          <div className="overflow-x-auto rounded border border-[#2c313a]">
+          <div className="overflow-x-auto rounded border border-[var(--mc-border)]">
             <table className="w-full border-collapse text-left text-xs">
-              <thead className="bg-[#141619] text-[#9aa2b1]">
+              <thead className="bg-[var(--mc-bg-app)] text-[var(--mc-text-muted)]">
                 <tr>
-                  <th className="border-b border-[#2c313a] px-3 py-2 font-medium">Материал</th>
-                  <th className="border-b border-[#2c313a] px-3 py-2 font-medium">Сечение</th>
-                  <th className="border-b border-[#2c313a] px-3 py-2 font-medium text-right">
+                  <th className="border-b border-[var(--mc-border)] px-3 py-2 font-medium">Материал</th>
+                  <th className="border-b border-[var(--mc-border)] px-3 py-2 font-medium">Сечение</th>
+                  <th className="border-b border-[var(--mc-border)] px-3 py-2 font-medium text-right">
                     Элементов
                   </th>
-                  <th className="border-b border-[#2c313a] px-3 py-2 font-medium text-right">
+                  <th className="border-b border-[var(--mc-border)] px-3 py-2 font-medium text-right">
                     Длина, м
                   </th>
-                  <th className="border-b border-[#2c313a] px-3 py-2 font-medium text-right">
+                  <th className="border-b border-[var(--mc-border)] px-3 py-2 font-medium text-right">
                     Цена / м
                   </th>
-                  <th className="border-b border-[#2c313a] px-3 py-2 font-medium text-right">
+                  <th className="border-b border-[var(--mc-border)] px-3 py-2 font-medium text-right">
                     Стоимость
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#252932]">
+              <tbody className="divide-y divide-[var(--mc-border)]">
                 {estimate.profileItems.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-[#6c7484]">
+                    <td colSpan={6} className="px-3 py-6 text-center text-[var(--mc-text-subtle)]">
                       В конструкции пока нет элементов.
                     </td>
                   </tr>
                 ) : (
                   estimate.profileItems.map((item) => (
-                    <tr key={item.profileId} className="hover:bg-[#22262d]">
-                      <td className="px-3 py-2 font-medium text-[#e6e8ec]">
+                    <tr key={item.profileId} className="hover:bg-[var(--mc-bg-elevated)]">
+                      <td className="px-3 py-2 font-medium text-[var(--mc-text)]">
                         <span className="inline-flex items-center gap-2">
                           <span
                             className="inline-block h-2.5 w-2.5 rounded-xs"
@@ -155,17 +155,17 @@ export function EstimateModal({ open, onClose }: EstimateModalProps) {
                           {item.profileName}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-[#9aa2b1]">{item.dimensionsLabel}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-[#e6e8ec]">
+                      <td className="px-3 py-2 text-[var(--mc-text-muted)]">{item.dimensionsLabel}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-[var(--mc-text)]">
                         {item.elementCount}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums text-[#e6e8ec]">
+                      <td className="px-3 py-2 text-right tabular-nums text-[var(--mc-text)]">
                         {item.totalLengthMeters.toFixed(3)}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums text-[#9aa2b1]">
+                      <td className="px-3 py-2 text-right tabular-nums text-[var(--mc-text-muted)]">
                         {formatMoney(item.pricePerMeter, estimate.currency)}
                       </td>
-                      <td className="px-3 py-2 text-right font-medium tabular-nums text-[#e6e8ec]">
+                      <td className="px-3 py-2 text-right font-medium tabular-nums text-[var(--mc-text)]">
                         {formatMoney(item.totalCost, estimate.currency)}
                       </td>
                     </tr>
@@ -176,29 +176,29 @@ export function EstimateModal({ open, onClose }: EstimateModalProps) {
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded border border-[#2c313a] bg-[#141619] p-3">
-              <div className="text-[11px] text-[#9aa2b1]">Металл ({estimate.totalLengthMeters} м)</div>
-              <div className="mt-1 text-base font-semibold tabular-nums text-white">
+            <div className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-3">
+              <div className="text-[11px] text-[var(--mc-text-muted)]">Металл ({estimate.totalLengthMeters} м)</div>
+              <div className="mt-1 text-base font-semibold tabular-nums text-[var(--mc-text)]">
                 {formatMoney(estimate.metalCost, estimate.currency)}
               </div>
             </div>
-            <div className="rounded border border-[#2c313a] bg-[#141619] p-3">
-              <div className="text-[11px] text-[#9aa2b1]">
+            <div className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-3">
+              <div className="text-[11px] text-[var(--mc-text-muted)]">
                 Покраска ({estimate.paintableLengthMeters} м)
               </div>
-              <div className="mt-1 text-base font-semibold tabular-nums text-white">
+              <div className="mt-1 text-base font-semibold tabular-nums text-[var(--mc-text)]">
                 {formatMoney(estimate.paintingCost, estimate.currency)}
               </div>
             </div>
-            <div className="rounded border border-[#2c313a] bg-[#141619] p-3">
-              <div className="text-[11px] text-[#9aa2b1]">
+            <div className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-3">
+              <div className="text-[11px] text-[var(--mc-text-muted)]">
                 Сварка ({estimate.jointCount} соед.
                 {estimate.knownWeldLengthMeters > 0
                   ? ` / ${estimate.knownWeldLengthMeters} м шва`
                   : ""}
                 )
               </div>
-              <div className="mt-1 text-base font-semibold tabular-nums text-white">
+              <div className="mt-1 text-base font-semibold tabular-nums text-[var(--mc-text)]">
                 {formatMoney(estimate.weldingCost, estimate.currency)}
               </div>
             </div>
@@ -206,42 +206,42 @@ export function EstimateModal({ open, onClose }: EstimateModalProps) {
 
           {estimate.hasUnknownWeldLength &&
             project.calculationSettings.weldPricingMode === "per_meter" && (
-              <div className="rounded border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+              <div className="rounded border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-[var(--mc-warning-text)]">
                 Часть соединений не имеет заданной длины сварного шва. В режиме расчёта за метр шва
                 учтены только соединения с явно указанной длиной.
               </div>
             )}
 
-          <div className="flex items-center justify-between rounded border border-blue-500/30 bg-blue-500/10 px-4 py-3">
-            <span className="text-xs font-medium uppercase tracking-wider text-blue-200">
+          <div className="flex items-center justify-between rounded border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] px-4 py-3">
+            <span className="text-xs font-medium uppercase tracking-wider text-[var(--mc-brand-inline)]">
               Итоговая стоимость конструкции
             </span>
-            <span className="text-xl font-bold tabular-nums text-white">
+            <span className="text-xl font-bold tabular-nums text-[var(--mc-text)]">
               {formatMoney(estimate.totalCost, estimate.currency)}
             </span>
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-[#2c313a] bg-[#16191e] px-4 py-3">
+        <div className="flex flex-col gap-2 border-t border-[var(--mc-border)] bg-[var(--mc-bg-app)] px-4 py-3">
           {exportError && (
-            <div className="flex items-center gap-2 rounded border border-rose-500/40 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-200">
-              <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-400" />
+            <div className="flex items-center gap-2 rounded border border-rose-500/40 bg-rose-500/10 px-3 py-1.5 text-xs text-[var(--mc-danger-text)]">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0 text-[var(--mc-danger-text)]" />
               <span>{exportError}</span>
             </div>
           )}
 
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[11px] text-[#9aa2b1]">
-              Экспорт включает спецификацию, чертёж (PDF) и итоговую смету.
+            <span className="text-[11px] text-[var(--mc-text-muted)]">
+              Экспорт включает спецификацию, чертёж (3 проекции в PDF) и итоговую смету.
             </span>
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={handleCopyText}
-                className="inline-flex items-center gap-1.5 rounded border border-[#343a46] bg-[#22262d] px-3 py-1.5 text-xs font-medium text-[#e6e8ec] hover:bg-[#2c313a]"
+                className="inline-flex items-center gap-1.5 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-3 py-1.5 text-xs font-medium text-[var(--mc-text)] hover:bg-[var(--mc-bg-hover)]"
               >
                 {copied ? (
-                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  <Check className="h-3.5 w-3.5 text-[var(--mc-success-text)]" />
                 ) : (
                   <Copy className="h-3.5 w-3.5" />
                 )}
@@ -250,7 +250,7 @@ export function EstimateModal({ open, onClose }: EstimateModalProps) {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="inline-flex items-center gap-1.5 rounded border border-[#343a46] bg-[#22262d] px-3 py-1.5 text-xs font-medium text-[#e6e8ec] hover:bg-[#2c313a]"
+                className="inline-flex items-center gap-1.5 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-3 py-1.5 text-xs font-medium text-[var(--mc-text)] hover:bg-[var(--mc-bg-hover)]"
               >
                 <Printer className="h-3.5 w-3.5" />
                 Печать
@@ -259,7 +259,7 @@ export function EstimateModal({ open, onClose }: EstimateModalProps) {
                 type="button"
                 onClick={() => void handleExportExcel()}
                 disabled={exportingFormat !== null}
-                className="inline-flex items-center gap-1.5 rounded border border-emerald-500/40 bg-emerald-600/20 px-3 py-1.5 text-xs font-medium text-emerald-200 hover:bg-emerald-600/30 disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded border border-emerald-500/40 bg-emerald-600/15 px-3 py-1.5 text-xs font-medium text-[var(--mc-success-text)] hover:bg-emerald-600/25 disabled:opacity-60"
               >
                 {exportingFormat === "excel" ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -272,7 +272,7 @@ export function EstimateModal({ open, onClose }: EstimateModalProps) {
                 type="button"
                 onClick={() => void handleExportPdf()}
                 disabled={exportingFormat !== null}
-                className="inline-flex items-center gap-1.5 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded bg-[var(--mc-brand)] px-3 py-1.5 text-xs font-medium text-[var(--mc-brand-text)] hover:bg-[var(--mc-brand-light)] disabled:opacity-60"
               >
                 {exportingFormat === "pdf" ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />

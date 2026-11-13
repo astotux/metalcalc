@@ -16,7 +16,7 @@ export function MetalCalcEditor() {
   }, [hydrateFromStorage]);
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#141619] text-[#e6e8ec]">
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-[var(--mc-bg-app)] text-[var(--mc-text)]">
       <TopToolbar />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <LeftSidebar />

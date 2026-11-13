@@ -145,17 +145,17 @@ export default function KonvaCanvas2D() {
   return (
     <div
       data-testid="canvas-2d-stage"
-      className="flex h-full w-full flex-col overflow-hidden bg-[#121417]"
+      className="flex h-full w-full flex-col overflow-hidden bg-[var(--mc-bg-canvas)]"
     >
       {/* Панель переключения 3-х ортогональных проекций */}
-      <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-[#2c313a] bg-[#181b20] px-3 text-xs">
-        <div className="flex min-w-0 items-center gap-2 text-[#9aa2b1]">
-          <span className="font-semibold text-[#e6e8ec]">
+      <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-[var(--mc-border)] bg-[var(--mc-bg-panel)] px-3 text-xs">
+        <div className="flex min-w-0 items-center gap-2 text-[var(--mc-text-muted)]">
+          <span className="font-semibold text-[var(--mc-text)]">
             {layoutMode === "three"
               ? "3 проекции (XY · XZ · YZ)"
               : "1 проекция (XY сверху)"}
           </span>
-          <span className="hidden truncate text-[11px] text-[#9aa2b1] lg:inline">
+          <span className="hidden truncate text-[11px] text-[var(--mc-text-muted)] lg:inline">
             · Размеры на стержнях показывают реальную длину по всем 3 осям (X, Y, Z)
           </span>
         </div>
@@ -165,21 +165,21 @@ export default function KonvaCanvas2D() {
             type="button"
             onClick={fitAllViewports}
             title="Вписать конструкцию во все активные виды (F)"
-            className="inline-flex h-6.5 items-center gap-1 rounded border border-[#2c313a] bg-[#20242c] px-2 text-[11px] font-medium text-[#c7cdd8] hover:bg-[#252a33] hover:text-white"
+            className="inline-flex h-6.5 items-center gap-1 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-2 text-[11px] font-medium text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
           >
             <Maximize2 className="h-3 w-3" />
             Вписать все
           </button>
 
-          <div className="inline-flex rounded border border-[#2c313a] bg-[#121417] p-0.5">
+          <div className="inline-flex rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] p-0.5">
             <button
               type="button"
               onClick={() => setLayoutMode("three")}
               data-testid="btn-2d-layout-three"
               className={`inline-flex h-5.5 items-center gap-1 rounded px-2 text-[11px] font-medium transition ${
                 layoutMode === "three"
-                  ? "bg-blue-600/25 text-blue-200"
-                  : "text-[#9aa2b1] hover:text-[#e6e8ec]"
+                  ? "bg-[var(--mc-brand)] text-[var(--mc-brand-text)]"
+                  : "text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
               }`}
             >
               <Columns2 className="h-3 w-3" />
@@ -194,8 +194,8 @@ export default function KonvaCanvas2D() {
               data-testid="btn-2d-layout-single"
               className={`inline-flex h-5.5 items-center gap-1 rounded px-2 text-[11px] font-medium transition ${
                 layoutMode === "single"
-                  ? "bg-blue-600/25 text-blue-200"
-                  : "text-[#9aa2b1] hover:text-[#e6e8ec]"
+                  ? "bg-[var(--mc-brand)] text-[var(--mc-brand-text)]"
+                  : "text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
               }`}
             >
               <Square className="h-3 w-3" />
@@ -209,7 +209,7 @@ export default function KonvaCanvas2D() {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div
           className={`min-h-0 min-w-0 transition-all ${
-            layoutMode === "three" ? "w-[62%] border-r border-[#2c313a]" : "w-full"
+            layoutMode === "three" ? "w-[62%] border-r border-[var(--mc-border)]" : "w-full"
           }`}
         >
           <OrthogonalViewport2D
@@ -225,7 +225,7 @@ export default function KonvaCanvas2D() {
 
         {layoutMode === "three" && (
           <div className="flex min-h-0 w-[38%] min-w-0 flex-col">
-            <div className="min-h-0 flex-1 border-b border-[#2c313a]">
+            <div className="min-h-0 flex-1 border-b border-[var(--mc-border)]">
               <OrthogonalViewport2D
                 ref={xzRef}
                 plane="xz"

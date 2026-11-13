@@ -17,23 +17,23 @@ export function BottomStatusBar() {
   );
 
   return (
-    <footer className="flex h-7 shrink-0 items-center justify-between border-t border-[#2c313a] bg-[#181b20] px-3 text-[11px] text-[#9aa2b1]">
+    <footer className="flex h-7 shrink-0 items-center justify-between border-t border-[var(--mc-border)] bg-[var(--mc-bg-panel)] px-3 text-[11px] text-[var(--mc-text-muted)]">
       <div className="flex items-center gap-4">
         <span>
-          Элементов: <strong className="tabular-nums text-[#e6e8ec]">{estimate.elementCount}</strong>
+          Элементов: <strong className="tabular-nums text-[var(--mc-text)]">{estimate.elementCount}</strong>
         </span>
         <span>
           Общая длина:{" "}
-          <strong className="tabular-nums text-[#e6e8ec]">
+          <strong className="tabular-nums text-[var(--mc-text)]">
             {estimate.totalLengthMeters.toFixed(2)} м
           </strong>{" "}
-          <span className="hidden sm:inline text-[#6c7484]">
+          <span className="hidden sm:inline text-[var(--mc-text-subtle)]">
             ({Math.round(estimate.totalLengthMm)} мм)
           </span>
         </span>
         <span>
           Масштаб:{" "}
-          <strong className="tabular-nums text-[#e6e8ec]">
+          <strong className="tabular-nums text-[var(--mc-text)]">
             {project.displaySettings.zoomPercent}%
           </strong>
         </span>
@@ -42,7 +42,7 @@ export function BottomStatusBar() {
       <div className="flex items-center gap-4">
         <span>
           Общая стоимость:{" "}
-          <strong className="tabular-nums text-blue-400">
+          <strong className="tabular-nums text-[var(--mc-brand-inline)]">
             {formatMoney(estimate.totalCost, estimate.currency)}
           </strong>
         </span>
@@ -50,26 +50,26 @@ export function BottomStatusBar() {
         <div className="flex items-center gap-1.5">
           {saveStatus === "saving" && (
             <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-400" />
-              <span className="text-blue-300">Сохранение...</span>
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--mc-brand-inline)]" />
+              <span className="text-[var(--mc-brand-inline)]">Сохранение...</span>
             </>
           )}
           {saveStatus === "saved" && (
             <>
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-              <span className="text-emerald-300">Сохранено (SQLite)</span>
+              <CheckCircle2 className="h-3.5 w-3.5 text-[var(--mc-success-text)]" />
+              <span className="text-[var(--mc-success-text)]">Сохранено (SQLite)</span>
             </>
           )}
           {saveStatus === "unsaved" && (
             <>
-              <Clock className="h-3.5 w-3.5 text-amber-400" />
-              <span className="text-amber-300">Не сохранено</span>
+              <Clock className="h-3.5 w-3.5 text-[var(--mc-warning-text)]" />
+              <span className="text-[var(--mc-warning-text)]">Не сохранено</span>
             </>
           )}
           {saveStatus === "error" && (
             <>
-              <AlertCircle className="h-3.5 w-3.5 text-rose-400" />
-              <span className="max-w-[260px] truncate text-rose-300" title={lastError ?? undefined}>
+              <AlertCircle className="h-3.5 w-3.5 text-[var(--mc-danger-text)]" />
+              <span className="max-w-[260px] truncate text-[var(--mc-danger-text)]" title={lastError ?? undefined}>
                 {lastError ?? "Ошибка сохранения"}
               </span>
             </>

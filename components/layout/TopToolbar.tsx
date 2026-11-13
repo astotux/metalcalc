@@ -11,14 +11,17 @@ import {
   FolderOpen,
   Layers,
   Loader2,
+  Moon,
   Redo2,
   Save,
   Settings,
+  Sun,
   Undo2,
 } from "lucide-react";
 import { EstimateModal } from "@/components/common/EstimateModal";
 import { downloadProjectExcel, downloadProjectPdf } from "@/features/export/exportClient";
 import { useProjectStore } from "@/store/useProjectStore";
+import { useThemeStore } from "@/store/useThemeStore";
 
 export function TopToolbar() {
   const project = useProjectStore((s) => s.project);
@@ -32,6 +35,8 @@ export function TopToolbar() {
   const undo = useProjectStore((s) => s.undo);
   const redo = useProjectStore((s) => s.redo);
   const setViewMode = useProjectStore((s) => s.setViewMode);
+  const theme = useThemeStore((s) => s.theme);
+  const setTheme = useThemeStore((s) => s.setTheme);
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(project.name);
@@ -74,23 +79,23 @@ export function TopToolbar() {
 
   return (
     <>
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-[#2c313a] bg-[#181b20] px-3">
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--mc-border)] bg-[var(--mc-bg-panel)] px-3">
         {/* Левая группа: логотип, название и файловые операции */}
         <div className="flex items-center gap-2 min-w-0">
           <Link
             href="/"
-            className="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-[#23272f]"
+            className="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-[var(--mc-bg-hover)]"
             title="MetalCalc"
           >
-            <div className="flex h-6 w-6 items-center justify-center rounded bg-blue-600 text-xs font-bold text-white">
+            <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--mc-brand)] text-xs font-bold text-[var(--mc-brand-text)] shadow-xs">
               MC
             </div>
-            <span className="hidden text-sm font-semibold tracking-tight text-white sm:inline">
+            <span className="hidden text-sm font-semibold tracking-tight text-[var(--mc-text)] sm:inline">
               MetalCalc
             </span>
           </Link>
 
-          <div className="h-5 w-px bg-[#2c313a]" />
+          <div className="h-5 w-px bg-[var(--mc-border)]" />
 
           {/* Название проекта */}
           <div className="flex items-center gap-1.5 min-w-0">
@@ -108,7 +113,7 @@ export function TopToolbar() {
                   }
                 }}
                 autoFocus
-                className="w-48 rounded border border-blue-500 bg-[#121417] px-2 py-0.5 text-xs text-white outline-none"
+                className="w-48 rounded border border-[var(--mc-brand-light)] bg-[var(--mc-bg-input)] px-2 py-0.5 text-xs text-[var(--mc-text)] outline-none"
               />
             ) : (
               <button
@@ -117,7 +122,7 @@ export function TopToolbar() {
                   setTitleDraft(project.name);
                   setIsEditingTitle(true);
                 }}
-                className="truncate max-w-[200px] rounded px-2 py-1 text-xs font-medium text-[#e6e8ec] hover:bg-[#23272f]"
+                className="truncate max-w-[200px] rounded px-2 py-1 text-xs font-medium text-[var(--mc-text)] hover:bg-[var(--mc-bg-hover)]"
                 title="Нажмите, чтобы переименовать проект"
               >
                 {project.name}
@@ -125,20 +130,20 @@ export function TopToolbar() {
             )}
 
             {project.isExample && (
-              <span className="hidden rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-300 md:inline">
+              <span className="hidden rounded border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--mc-brand-inline)] md:inline">
                 Пример
               </span>
             )}
           </div>
 
-          <div className="h-5 w-px bg-[#2c313a]" />
+          <div className="h-5 w-px bg-[var(--mc-border)]" />
 
           {/* Операции с проектом */}
           <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={handleCreateProject}
-              className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs text-[#c7cdd8] hover:bg-[#252a33] hover:text-white"
+              className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
               title="Создать новый проект"
             >
               <FilePlus2 className="h-3.5 w-3.5" />
@@ -147,7 +152,7 @@ export function TopToolbar() {
 
             <Link
               href="/projects"
-              className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs text-[#c7cdd8] hover:bg-[#252a33] hover:text-white"
+              className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
               title="Открыть список проектов"
             >
               <FolderOpen className="h-3.5 w-3.5" />
@@ -160,10 +165,10 @@ export function TopToolbar() {
               disabled={saveStatus === "saving"}
               className={`inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs transition-colors disabled:opacity-60 ${
                 saveStatus === "unsaved"
-                  ? "bg-blue-600/20 text-blue-300 hover:bg-blue-600/30"
+                  ? "bg-[var(--mc-brand-soft)] text-[var(--mc-brand-inline)] hover:bg-[var(--mc-brand)] hover:text-[var(--mc-brand-text)]"
                   : saveStatus === "error"
-                    ? "bg-rose-600/20 text-rose-300 hover:bg-rose-600/30"
-                    : "text-[#c7cdd8] hover:bg-[#252a33] hover:text-white"
+                    ? "bg-rose-600/20 text-[var(--mc-danger-text)] hover:bg-rose-600/30"
+                    : "text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
               }`}
               title="Сохранить проект в SQLite"
             >
@@ -177,12 +182,12 @@ export function TopToolbar() {
 
         {/* Центральная группа: Отмена / Повтор и 2D / 3D */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center rounded border border-[#2c313a] bg-[#141619] p-0.5">
+          <div className="flex items-center rounded border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-0.5">
             <button
               type="button"
               onClick={undo}
               disabled={historyPastCount === 0}
-              className="rounded p-1 text-[#c7cdd8] hover:bg-[#252a33] disabled:opacity-35 disabled:hover:bg-transparent"
+              className="rounded p-1 text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] disabled:opacity-35 disabled:hover:bg-transparent"
               title="Отменить (Undo)"
             >
               <Undo2 className="h-3.5 w-3.5" />
@@ -191,7 +196,7 @@ export function TopToolbar() {
               type="button"
               onClick={redo}
               disabled={historyFutureCount === 0}
-              className="rounded p-1 text-[#c7cdd8] hover:bg-[#252a33] disabled:opacity-35 disabled:hover:bg-transparent"
+              className="rounded p-1 text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] disabled:opacity-35 disabled:hover:bg-transparent"
               title="Повторить (Redo)"
             >
               <Redo2 className="h-3.5 w-3.5" />
@@ -199,7 +204,7 @@ export function TopToolbar() {
           </div>
 
           <div
-            className="flex items-center rounded border border-[#2c313a] bg-[#141619] p-0.5"
+            className="flex items-center rounded border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-0.5"
             role="group"
             aria-label="Режим отображения"
           >
@@ -208,8 +213,8 @@ export function TopToolbar() {
               onClick={() => setViewMode("2d")}
               className={`inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                 viewMode === "2d"
-                  ? "bg-blue-600 text-white"
-                  : "text-[#9aa2b1] hover:text-white"
+                  ? "bg-[var(--mc-brand)] text-[var(--mc-brand-text)] shadow-xs"
+                  : "text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
               }`}
             >
               <Layers className="h-3.5 w-3.5" />
@@ -220,8 +225,8 @@ export function TopToolbar() {
               onClick={() => setViewMode("3d")}
               className={`inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                 viewMode === "3d"
-                  ? "bg-blue-600 text-white"
-                  : "text-[#9aa2b1] hover:text-white"
+                  ? "bg-[var(--mc-brand)] text-[var(--mc-brand-text)] shadow-xs"
+                  : "text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
               }`}
             >
               <Box className="h-3.5 w-3.5" />
@@ -230,12 +235,45 @@ export function TopToolbar() {
           </div>
         </div>
 
-        {/* Правая группа: Настройки и Экспорт / Смета */}
+        {/* Правая группа: Тема, Настройки и Экспорт / Смета */}
         <div className="flex items-center gap-1.5">
+          <div
+            className="flex items-center rounded border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-0.5"
+            role="group"
+            aria-label="Переключатель темы"
+          >
+            <button
+              type="button"
+              onClick={() => setTheme("light")}
+              aria-pressed={theme === "light"}
+              title="Светлая тема"
+              className={`rounded p-1 transition-colors ${
+                theme === "light"
+                  ? "bg-[var(--mc-brand)] text-[var(--mc-brand-text)] shadow-xs"
+                  : "text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
+              }`}
+            >
+              <Sun className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme("dark")}
+              aria-pressed={theme === "dark"}
+              title="Тёмная тема"
+              className={`rounded p-1 transition-colors ${
+                theme === "dark"
+                  ? "bg-[var(--mc-brand)] text-[var(--mc-brand-text)] shadow-xs"
+                  : "text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
+              }`}
+            >
+              <Moon className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
           <Link
             href="/settings"
-            className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs text-[#c7cdd8] hover:bg-[#252a33] hover:text-white"
-            title="Настройки расчётов и интерфейса"
+            className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
+            title="Настройки расчётов и сетки"
           >
             <Settings className="h-3.5 w-3.5" />
             <span className="hidden md:inline">Настройки</span>
@@ -245,7 +283,7 @@ export function TopToolbar() {
             type="button"
             onClick={() => void handleQuickExport("excel")}
             disabled={exportingFormat !== null}
-            className="hidden items-center gap-1 rounded border border-[#343a46] bg-[#1e2229] px-2 py-1.5 text-xs text-emerald-300 hover:bg-[#252a33] disabled:opacity-60 xl:inline-flex"
+            className="hidden items-center gap-1 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-2 py-1.5 text-xs text-[var(--mc-success-text)] hover:bg-[var(--mc-bg-hover)] disabled:opacity-60 xl:inline-flex"
             title="Скачать смету в Excel (.xlsx)"
           >
             {exportingFormat === "excel" ? (
@@ -260,7 +298,7 @@ export function TopToolbar() {
             type="button"
             onClick={() => void handleQuickExport("pdf")}
             disabled={exportingFormat !== null}
-            className="hidden items-center gap-1 rounded border border-[#343a46] bg-[#1e2229] px-2 py-1.5 text-xs text-sky-300 hover:bg-[#252a33] disabled:opacity-60 xl:inline-flex"
+            className="hidden items-center gap-1 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-2 py-1.5 text-xs text-[var(--mc-brand-inline)] hover:bg-[var(--mc-bg-hover)] disabled:opacity-60 xl:inline-flex"
             title="Скачать чертёж и смету в PDF"
           >
             {exportingFormat === "pdf" ? (
@@ -274,10 +312,10 @@ export function TopToolbar() {
           <button
             type="button"
             onClick={() => setEstimateOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded border border-[#343a46] bg-[#22262d] px-2.5 py-1.5 text-xs font-medium text-[#e6e8ec] hover:bg-[#2c313a]"
+            className="inline-flex items-center gap-1.5 rounded bg-[var(--mc-brand)] px-2.5 py-1.5 text-xs font-medium text-[var(--mc-brand-text)] hover:bg-[var(--mc-brand-light)] transition-colors shadow-xs"
             title="Открыть смету и экспорт"
           >
-            <Download className="h-3.5 w-3.5 text-blue-400" />
+            <Download className="h-3.5 w-3.5" />
             <span>Экспорт / Смета</span>
           </button>
         </div>

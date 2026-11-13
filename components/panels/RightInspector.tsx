@@ -56,17 +56,17 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
   };
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l border-[#2c313a] bg-[#181b20] overflow-y-auto">
-      <div className="border-b border-[#2c313a] px-3 py-2.5">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#9aa2b1]">
+    <aside className="flex w-80 shrink-0 flex-col border-l border-[var(--mc-border)] bg-[var(--mc-bg-panel)] overflow-y-auto">
+      <div className="border-b border-[var(--mc-border)] px-3 py-2.5">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-text-muted)]">
           Свойства элемента
         </div>
-        <div className="mt-0.5 text-xs text-[#6c7484]">ID: {selectedElement.id}</div>
+        <div className="mt-0.5 text-xs text-[var(--mc-text-subtle)]">ID: {selectedElement.id}</div>
       </div>
 
       <div className="space-y-4 p-3">
         {/* Метка элемента */}
-        <label className="block text-[11px] text-[#9aa2b1]">
+        <label className="block text-[11px] text-[var(--mc-text-muted)]">
           Название / пометка
           <input
             type="text"
@@ -75,13 +75,13 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
               updateElement(selectedElement.id, { label: e.target.value })
             }
             placeholder="Например: Стойка левая"
-            className="mt-1 w-full rounded border border-[#2c313a] bg-[#121417] px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500"
+            className="mt-1 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2.5 py-1.5 text-xs text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
           />
         </label>
 
         {/* Точная длина в миллиметрах */}
         <div>
-          <label className="block text-[11px] text-[#9aa2b1]">
+          <label className="block text-[11px] text-[var(--mc-text-muted)]">
             Длина элемента (мм)
             <div className="mt-1 flex gap-1.5">
               <input
@@ -93,12 +93,12 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
                 onKeyDown={(e) => {
                   if (e.key === "Enter") applyLength();
                 }}
-                className="w-full rounded border border-[#2c313a] bg-[#121417] px-2.5 py-1.5 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+                className="w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2.5 py-1.5 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
               />
               <button
                 type="button"
                 onClick={applyLength}
-                className="shrink-0 rounded bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-500"
+                className="shrink-0 rounded bg-[var(--mc-brand)] px-2.5 py-1.5 text-xs font-medium text-[var(--mc-brand-text)] hover:bg-[var(--mc-brand-light)]"
               >
                 ОК
               </button>
@@ -108,13 +108,13 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
 
         {/* Координаты начала */}
         <div>
-          <div className="mb-1 text-[11px] text-[#9aa2b1]">Координаты начала (мм)</div>
+          <div className="mb-1 text-[11px] text-[var(--mc-text-muted)]">Координаты начала (мм)</div>
           <div className="grid grid-cols-3 gap-1.5">
             {(
               [
                 { axis: "x", color: "text-red-400" },
-                { axis: "y", color: "text-emerald-400" },
-                { axis: "z", color: "text-blue-400" },
+                { axis: "y", color: "text-emerald-500" },
+                { axis: "z", color: "text-sky-500" },
               ] as const
             ).map(({ axis, color }) => (
               <label key={axis} className={`text-[10px] uppercase font-medium ${color}`}>
@@ -123,7 +123,7 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
                   type="number"
                   value={selectedElement.start[axis]}
                   onChange={(e) => updateCoord("start", axis, e.target.value)}
-                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-2 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+                  className="mt-0.5 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2 py-1 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
                 />
               </label>
             ))}
@@ -132,13 +132,13 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
 
         {/* Координаты конца */}
         <div>
-          <div className="mb-1 text-[11px] text-[#9aa2b1]">Координаты конца (мм)</div>
+          <div className="mb-1 text-[11px] text-[var(--mc-text-muted)]">Координаты конца (мм)</div>
           <div className="grid grid-cols-3 gap-1.5">
             {(
               [
                 { axis: "x", color: "text-red-400" },
-                { axis: "y", color: "text-emerald-400" },
-                { axis: "z", color: "text-blue-400" },
+                { axis: "y", color: "text-emerald-500" },
+                { axis: "z", color: "text-sky-500" },
               ] as const
             ).map(({ axis, color }) => (
               <label key={axis} className={`text-[10px] uppercase font-medium ${color}`}>
@@ -147,7 +147,7 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
                   type="number"
                   value={selectedElement.end[axis]}
                   onChange={(e) => updateCoord("end", axis, e.target.value)}
-                  className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-2 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+                  className="mt-0.5 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2 py-1 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
                 />
               </label>
             ))}
@@ -156,21 +156,21 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
 
         {/* Быстрый сдвиг по осям X / Y / Z */}
         <div>
-          <div className="mb-1 flex items-center justify-between text-[11px] text-[#9aa2b1]">
+          <div className="mb-1 flex items-center justify-between text-[11px] text-[var(--mc-text-muted)]">
             <span>Сдвиг по осям</span>
-            <span className="text-[10px] tabular-nums text-[#6c7484]">шаг {nudgeStep} мм</span>
+            <span className="text-[10px] tabular-nums text-[var(--mc-text-subtle)]">шаг {nudgeStep} мм</span>
           </div>
           <div className="grid grid-cols-3 gap-1.5">
             {(
               [
-                { axis: "x", label: "X", color: "text-red-300" },
-                { axis: "y", label: "Y", color: "text-emerald-300" },
-                { axis: "z", label: "Z", color: "text-blue-300" },
+                { axis: "x", label: "X", color: "text-red-400" },
+                { axis: "y", label: "Y", color: "text-emerald-500" },
+                { axis: "z", label: "Z", color: "text-sky-500" },
               ] as const
             ).map(({ axis, label, color }) => (
               <div
                 key={axis}
-                className="flex items-center justify-between rounded border border-[#2c313a] bg-[#121417] px-1 py-0.5 text-[11px]"
+                className="flex items-center justify-between rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-1 py-0.5 text-[11px]"
               >
                 <button
                   type="button"
@@ -181,7 +181,7 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
                       z: axis === "z" ? -nudgeStep : 0,
                     })
                   }
-                  className="rounded px-1.5 py-0.5 text-[#9aa2b1] hover:bg-[#22262d] hover:text-white"
+                  className="rounded px-1.5 py-0.5 text-[var(--mc-text-muted)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
                   title={`Сдвинуть на -${nudgeStep} мм по ${label}`}
                 >
                   −
@@ -196,7 +196,7 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
                       z: axis === "z" ? nudgeStep : 0,
                     })
                   }
-                  className="rounded px-1.5 py-0.5 text-[#9aa2b1] hover:bg-[#22262d] hover:text-white"
+                  className="rounded px-1.5 py-0.5 text-[var(--mc-text-muted)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
                   title={`Сдвинуть на +${nudgeStep} мм по ${label}`}
                 >
                   +
@@ -207,14 +207,14 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
         </div>
 
         {/* Выбор профиля */}
-        <label className="block text-[11px] text-[#9aa2b1]">
+        <label className="block text-[11px] text-[var(--mc-text-muted)]">
           Тип профиля
           <select
             value={selectedElement.profileId}
             onChange={(e) =>
               updateElement(selectedElement.id, { profileId: e.target.value })
             }
-            className="mt-1 w-full rounded border border-[#2c313a] bg-[#121417] px-2 py-1.5 text-xs text-white outline-none focus:border-blue-500"
+            className="mt-1 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2 py-1.5 text-xs text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
           >
             {project.profiles.map((p) => (
               <option key={p.id} value={p.id}>
@@ -225,8 +225,8 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
         </label>
 
         {/* Цвет элемента */}
-        <div className="flex items-center justify-between rounded border border-[#2c313a] bg-[#141619] px-2.5 py-2">
-          <span className="text-xs text-[#c7cdd8]">Цвет отображения</span>
+        <div className="flex items-center justify-between rounded border border-[var(--mc-border)] bg-[var(--mc-bg-app)] px-2.5 py-2">
+          <span className="text-xs text-[var(--mc-text-secondary)]">Цвет отображения</span>
           <div className="flex items-center gap-2">
             <input
               type="color"
@@ -234,7 +234,7 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
               onChange={(e) =>
                 updateElement(selectedElement.id, { color: e.target.value })
               }
-              className="h-6 w-8 cursor-pointer rounded border border-[#2c313a] bg-transparent"
+              className="h-6 w-8 cursor-pointer rounded border border-[var(--mc-border)] bg-transparent"
             />
             {selectedElement.color && (
               <button
@@ -242,7 +242,7 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
                 onClick={() =>
                   updateElement(selectedElement.id, { color: undefined })
                 }
-                className="text-[10px] text-[#9aa2b1] hover:text-white"
+                className="text-[10px] text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
               >
                 Сброс
               </button>
@@ -251,7 +251,7 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
         </div>
 
         {/* Исключение из покраски */}
-        <label className="flex cursor-pointer items-center gap-2 rounded border border-[#2c313a] bg-[#141619] px-2.5 py-2 text-xs text-[#c7cdd8]">
+        <label className="flex cursor-pointer items-center gap-2 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-app)] px-2.5 py-2 text-xs text-[var(--mc-text-secondary)]">
           <input
             type="checkbox"
             checked={Boolean(selectedElement.excludeFromPainting)}
@@ -260,18 +260,18 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
                 excludeFromPainting: e.target.checked,
               })
             }
-            className="rounded border-[#3c4350] bg-[#121417]"
+            className="rounded border-[var(--mc-border-strong)] bg-[var(--mc-bg-input)] accent-[var(--mc-brand)]"
           />
           Исключить из расчёта покраски
         </label>
 
         {/* Стоимость металла элемента */}
-        <div className="rounded border border-[#2c313a] bg-[#141619] p-2.5">
-          <div className="text-[11px] text-[#9aa2b1]">Стоимость металла элемента</div>
-          <div className="mt-1 text-base font-semibold tabular-nums text-white">
+        <div className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-2.5">
+          <div className="text-[11px] text-[var(--mc-text-muted)]">Стоимость металла элемента</div>
+          <div className="mt-1 text-base font-semibold tabular-nums text-[var(--mc-brand-inline)]">
             {formatMoney(elementCost, project.calculationSettings.currency)}
           </div>
-          <div className="mt-0.5 text-[10px] text-[#6c7484]">
+          <div className="mt-0.5 text-[10px] text-[var(--mc-text-subtle)]">
             {mmToMeters(lengthMm).toFixed(3)} м ×{" "}
             {formatMoney(profile?.pricePerMeter ?? 0, project.calculationSettings.currency)}
           </div>
@@ -282,7 +282,7 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
           <button
             type="button"
             onClick={() => duplicateElement(selectedElement.id)}
-            className="inline-flex items-center justify-center gap-1.5 rounded border border-[#343a46] bg-[#22262d] py-1.5 text-xs text-[#e6e8ec] hover:bg-[#2c313a]"
+            className="inline-flex items-center justify-center gap-1.5 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] py-1.5 text-xs text-[var(--mc-text)] hover:bg-[var(--mc-bg-hover)]"
           >
             <Copy className="h-3.5 w-3.5" />
             Копировать
@@ -290,7 +290,7 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
           <button
             type="button"
             onClick={() => deleteElements([selectedElement.id])}
-            className="inline-flex items-center justify-center gap-1.5 rounded border border-rose-500/40 bg-rose-500/10 py-1.5 text-xs text-rose-300 hover:bg-rose-500/20"
+            className="inline-flex items-center justify-center gap-1.5 rounded border border-rose-500/40 bg-rose-500/10 py-1.5 text-xs text-[var(--mc-danger-text)] hover:bg-rose-500/20"
           >
             <Trash2 className="h-3.5 w-3.5" />
             Удалить
@@ -335,20 +335,20 @@ function MultiSelectionInspector({ selectedElementIds }: MultiSelectionInspector
   });
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l border-[#2c313a] bg-[#181b20] p-3 space-y-3 overflow-y-auto">
+    <aside className="flex w-80 shrink-0 flex-col border-l border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-3 space-y-3 overflow-y-auto">
       <div>
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#9aa2b1]">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-text-muted)]">
           Выбрано элементов: {selectedElementIds.length}
         </div>
-        <div className="mt-1 text-xs text-[#9aa2b1]">
+        <div className="mt-1 text-xs text-[var(--mc-text-muted)]">
           Суммарная длина:{" "}
-          <strong className="tabular-nums text-[#e6e8ec]">
+          <strong className="tabular-nums text-[var(--mc-text)]">
             {totalSelectedMeters.toFixed(2)} м
           </strong>
         </div>
       </div>
 
-      <label className="block text-[11px] text-[#9aa2b1]">
+      <label className="block text-[11px] text-[var(--mc-text-muted)]">
         Назначить профиль всем выбранным
         <select
           defaultValue=""
@@ -358,7 +358,7 @@ function MultiSelectionInspector({ selectedElementIds }: MultiSelectionInspector
               e.target.value = "";
             }
           }}
-          className="mt-1 w-full rounded border border-[#2c313a] bg-[#121417] px-2 py-1.5 text-xs text-white outline-none focus:border-blue-500"
+          className="mt-1 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2 py-1.5 text-xs text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
         >
           <option value="" disabled>
             Выберите профиль...
@@ -372,8 +372,8 @@ function MultiSelectionInspector({ selectedElementIds }: MultiSelectionInspector
       </label>
 
       {/* Сдвиг или копирование группы по осям X / Y / Z */}
-      <div className="rounded border border-[#2c313a] bg-[#141619] p-2.5 space-y-2">
-        <div className="text-[11px] font-medium text-[#c7cdd8]">
+      <div className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-2.5 space-y-2">
+        <div className="text-[11px] font-medium text-[var(--mc-text-secondary)]">
           Сдвиг / копия по осям (мм)
         </div>
         <div className="grid grid-cols-3 gap-1.5">
@@ -383,25 +383,25 @@ function MultiSelectionInspector({ selectedElementIds }: MultiSelectionInspector
               type="number"
               value={deltaX}
               onChange={(e) => setDeltaX(e.target.value)}
-              className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+              className="mt-0.5 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-1.5 py-1 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
             />
           </label>
-          <label className="text-[10px] font-medium text-emerald-400">
+          <label className="text-[10px] font-medium text-emerald-500">
             ΔY
             <input
               type="number"
               value={deltaY}
               onChange={(e) => setDeltaY(e.target.value)}
-              className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+              className="mt-0.5 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-1.5 py-1 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
             />
           </label>
-          <label className="text-[10px] font-medium text-blue-400">
+          <label className="text-[10px] font-medium text-sky-500">
             ΔZ (выс.)
             <input
               type="number"
               value={deltaZ}
               onChange={(e) => setDeltaZ(e.target.value)}
-              className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-1.5 py-1 text-xs tabular-nums text-white outline-none focus:border-blue-500"
+              className="mt-0.5 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-1.5 py-1 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
             />
           </label>
         </div>
@@ -409,14 +409,14 @@ function MultiSelectionInspector({ selectedElementIds }: MultiSelectionInspector
           <button
             type="button"
             onClick={() => moveElements(selectedElementIds, parsedDelta())}
-            className="rounded border border-[#343a46] bg-[#22262d] py-1.5 text-xs text-[#e6e8ec] hover:bg-[#2c313a]"
+            className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] py-1.5 text-xs text-[var(--mc-text)] hover:bg-[var(--mc-bg-hover)]"
           >
             Сдвинуть
           </button>
           <button
             type="button"
             onClick={() => copyElements(selectedElementIds, parsedDelta())}
-            className="inline-flex items-center justify-center gap-1 rounded bg-blue-600/20 border border-blue-500/40 py-1.5 text-xs text-blue-200 hover:bg-blue-600/30"
+            className="inline-flex items-center justify-center gap-1 rounded border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] py-1.5 text-xs text-[var(--mc-brand-inline)] hover:bg-[var(--mc-brand)] hover:text-[var(--mc-brand-text)]"
           >
             <Copy className="h-3 w-3" />
             Копировать
@@ -428,9 +428,9 @@ function MultiSelectionInspector({ selectedElementIds }: MultiSelectionInspector
         <button
           type="button"
           onClick={() => groupSelectedElements()}
-          className="inline-flex items-center justify-center gap-1.5 rounded border border-[#343a46] bg-[#22262d] py-1.5 text-xs text-[#e6e8ec] hover:bg-[#2c313a]"
+          className="inline-flex items-center justify-center gap-1.5 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] py-1.5 text-xs text-[var(--mc-text)] hover:bg-[var(--mc-bg-hover)]"
         >
-          <Group className="h-3.5 w-3.5 text-blue-400" />
+          <Group className="h-3.5 w-3.5 text-[var(--mc-brand-light)]" />
           Сгруппировать
         </button>
 
@@ -438,7 +438,7 @@ function MultiSelectionInspector({ selectedElementIds }: MultiSelectionInspector
           type="button"
           onClick={() => ungroupSelectedElements()}
           disabled={!hasGrouped}
-          className="inline-flex items-center justify-center gap-1.5 rounded border border-[#343a46] bg-[#22262d] py-1.5 text-xs text-[#e6e8ec] hover:bg-[#2c313a] disabled:opacity-40"
+          className="inline-flex items-center justify-center gap-1.5 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] py-1.5 text-xs text-[var(--mc-text)] hover:bg-[var(--mc-bg-hover)] disabled:opacity-40"
         >
           <Ungroup className="h-3.5 w-3.5" />
           Разгруппировать
@@ -448,7 +448,7 @@ function MultiSelectionInspector({ selectedElementIds }: MultiSelectionInspector
       <button
         type="button"
         onClick={() => deleteElements(selectedElementIds)}
-        className="inline-flex items-center justify-center gap-1.5 rounded border border-rose-500/40 bg-rose-500/10 py-2 text-xs text-rose-300 hover:bg-rose-500/20"
+        className="inline-flex items-center justify-center gap-1.5 rounded border border-rose-500/40 bg-rose-500/10 py-2 text-xs text-[var(--mc-danger-text)] hover:bg-rose-500/20"
       >
         <Trash2 className="h-3.5 w-3.5" />
         Удалить выбранные ({selectedElementIds.length})
@@ -500,8 +500,8 @@ export function RightInspector() {
 
   // Ничего не выбрано: вкладки Смета / Соединения / Сетка и проект
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l border-[#2c313a] bg-[#181b20] overflow-hidden">
-      <div className="grid grid-cols-3 border-b border-[#2c313a] bg-[#141619] p-1">
+    <aside className="flex w-80 shrink-0 flex-col border-l border-[var(--mc-border)] bg-[var(--mc-bg-panel)] overflow-hidden">
+      <div className="grid grid-cols-3 border-b border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-1">
         {(
           [
             { id: "estimate", label: "Смета" },
@@ -515,8 +515,8 @@ export function RightInspector() {
             onClick={() => setActiveTab(tab.id)}
             className={`rounded py-1.5 text-[11px] font-medium transition-colors ${
               activeTab === tab.id
-                ? "bg-[#22262d] text-white shadow-xs"
-                : "text-[#9aa2b1] hover:text-white"
+                ? "bg-[var(--mc-brand)] text-[var(--mc-brand-text)] shadow-xs"
+                : "text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
             }`}
           >
             {tab.label}
@@ -530,22 +530,22 @@ export function RightInspector() {
         {activeTab === "grid" && (
           <div>
             {/* Общие параметры проекта */}
-            <section className="border-b border-[#2c313a] p-3">
-              <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#9aa2b1]">
+            <section className="border-b border-[var(--mc-border)] p-3">
+              <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-text-muted)]">
                 Параметры проекта
               </h2>
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-[#9aa2b1]">Элементов:</span>
-                  <span className="tabular-nums text-[#e6e8ec]">{project.elements.length}</span>
+                  <span className="text-[var(--mc-text-muted)]">Элементов:</span>
+                  <span className="tabular-nums text-[var(--mc-text)]">{project.elements.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#9aa2b1]">Соединений:</span>
-                  <span className="tabular-nums text-[#e6e8ec]">{project.joints.length}</span>
+                  <span className="text-[var(--mc-text-muted)]">Соединений:</span>
+                  <span className="tabular-nums text-[var(--mc-text)]">{project.joints.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#9aa2b1]">Изменён:</span>
-                  <span className="tabular-nums text-[#9aa2b1]">
+                  <span className="text-[var(--mc-text-muted)]">Изменён:</span>
+                  <span className="tabular-nums text-[var(--mc-text-muted)]">
                     {new Date(project.updatedAt).toLocaleTimeString("ru-RU", {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -558,14 +558,14 @@ export function RightInspector() {
             {/* Настройки отображения и сетки */}
             <section className="p-3">
               <div className="mb-2 flex items-center gap-1.5">
-                <Sliders className="h-3.5 w-3.5 text-[#9aa2b1]" />
-                <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[#9aa2b1]">
+                <Sliders className="h-3.5 w-3.5 text-[var(--mc-text-muted)]" />
+                <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-text-muted)]">
                   Отображение и сетка
                 </h2>
               </div>
 
               <div className="grid grid-cols-2 gap-2 mb-2.5">
-                <label className="text-[10px] text-[#9aa2b1]">
+                <label className="text-[10px] text-[var(--mc-text-muted)]">
                   Основная сетка, мм
                   <input
                     type="number"
@@ -576,10 +576,10 @@ export function RightInspector() {
                       const val = Number(e.target.value);
                       if (val >= 50) updateGridSettings({ majorStepMm: val });
                     }}
-                    className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-2 py-1 text-xs tabular-nums text-white outline-none"
+                    className="mt-0.5 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2 py-1 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
                   />
                 </label>
-                <label className="text-[10px] text-[#9aa2b1]">
+                <label className="text-[10px] text-[var(--mc-text-muted)]">
                   Мелкая сетка, мм
                   <input
                     type="number"
@@ -590,17 +590,18 @@ export function RightInspector() {
                       const val = Number(e.target.value);
                       if (val >= 10) updateGridSettings({ minorStepMm: val });
                     }}
-                    className="mt-0.5 w-full rounded border border-[#2c313a] bg-[#121417] px-2 py-1 text-xs tabular-nums text-white outline-none"
+                    className="mt-0.5 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2 py-1 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
                   />
                 </label>
               </div>
 
-              <div className="space-y-1.5 text-xs text-[#c7cdd8]">
+              <div className="space-y-1.5 text-xs text-[var(--mc-text-secondary)]">
                 <label className="flex cursor-pointer items-center gap-2">
                   <input
                     type="checkbox"
                     checked={project.gridSettings.showGrid}
                     onChange={(e) => updateGridSettings({ showGrid: e.target.checked })}
+                    className="accent-[var(--mc-brand)]"
                   />
                   Показывать сетку
                 </label>
@@ -609,6 +610,7 @@ export function RightInspector() {
                     type="checkbox"
                     checked={project.gridSettings.showAxes}
                     onChange={(e) => updateGridSettings({ showAxes: e.target.checked })}
+                    className="accent-[var(--mc-brand)]"
                   />
                   Показывать оси координат
                 </label>
@@ -617,6 +619,7 @@ export function RightInspector() {
                     type="checkbox"
                     checked={project.gridSettings.showDimensions}
                     onChange={(e) => updateGridSettings({ showDimensions: e.target.checked })}
+                    className="accent-[var(--mc-brand)]"
                   />
                   Подписи размеров (мм)
                 </label>
@@ -625,16 +628,18 @@ export function RightInspector() {
                     type="checkbox"
                     checked={project.gridSettings.snapEnabled}
                     onChange={(e) => updateGridSettings({ snapEnabled: e.target.checked })}
+                    className="accent-[var(--mc-brand)]"
                   />
                   Включить привязки (общая)
                 </label>
                 {project.gridSettings.snapEnabled && (
-                  <div className="ml-4 space-y-1 border-l border-[#2c313a] pl-2.5 text-[11px] text-[#9aa2b1]">
+                  <div className="ml-4 space-y-1 border-l border-[var(--mc-border)] pl-2.5 text-[11px] text-[var(--mc-text-muted)]">
                     <label className="flex cursor-pointer items-center gap-2">
                       <input
                         type="checkbox"
                         checked={project.gridSettings.snapToGrid}
                         onChange={(e) => updateGridSettings({ snapToGrid: e.target.checked })}
+                        className="accent-[var(--mc-brand)]"
                       />
                       К сетке ({project.gridSettings.minorStepMm} мм)
                     </label>
@@ -645,6 +650,7 @@ export function RightInspector() {
                         onChange={(e) =>
                           updateGridSettings({ snapToEndpoints: e.target.checked })
                         }
+                        className="accent-[var(--mc-brand)]"
                       />
                       К концам линий
                     </label>
@@ -655,6 +661,7 @@ export function RightInspector() {
                         onChange={(e) =>
                           updateGridSettings({ snapToIntersections: e.target.checked })
                         }
+                        className="accent-[var(--mc-brand)]"
                       />
                       К пересечениям
                     </label>
@@ -665,6 +672,7 @@ export function RightInspector() {
                         onChange={(e) =>
                           updateGridSettings({ snapToAngles: e.target.checked })
                         }
+                        className="accent-[var(--mc-brand)]"
                       />
                       К углам (шаг 45°)
                     </label>

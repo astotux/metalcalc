@@ -6,7 +6,7 @@ import { useProjectStore } from "@/store/useProjectStore";
 const KonvaCanvas2D = dynamic(() => import("@/features/drawing/KonvaCanvas2D"), {
   ssr: false,
   loading: () => (
-    <div className="flex flex-1 items-center justify-center bg-[#121417] text-xs text-[#9aa2b1]">
+    <div className="flex flex-1 items-center justify-center bg-[var(--mc-bg-canvas)] text-xs text-[var(--mc-text-muted)]">
       Загрузка 2D-редактора...
     </div>
   ),
@@ -15,7 +15,7 @@ const KonvaCanvas2D = dynamic(() => import("@/features/drawing/KonvaCanvas2D"), 
 const SceneCanvas3D = dynamic(() => import("@/features/visualization/SceneCanvas3D"), {
   ssr: false,
   loading: () => (
-    <div className="flex flex-1 items-center justify-center bg-[#121417] text-xs text-[#9aa2b1]">
+    <div className="flex flex-1 items-center justify-center bg-[var(--mc-bg-canvas)] text-xs text-[var(--mc-text-muted)]">
       Загрузка 3D-сцены...
     </div>
   ),
