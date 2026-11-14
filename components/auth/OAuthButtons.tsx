@@ -17,9 +17,6 @@ export function OAuthButtons({
   const fromParam = mode === "register" ? "register" : "login";
   const encodedNext = encodeURIComponent(nextPath);
 
-  const anyMissing =
-    oauthProviders !== undefined && !oauthProviders.yandex;
-
   return (
     <div className="space-y-2.5">
       <div className="relative flex items-center py-1">
@@ -42,24 +39,6 @@ export function OAuthButtons({
         </span>
         <span>{verb} Яндекс</span>
       </a>
-
-      {anyMissing && (
-        <p className="text-center text-[11px] text-[var(--mc-text-subtle)]">
-          Для работы Яндекс OAuth задайте{" "}
-          <code className="rounded bg-[var(--mc-bg-elevated)] px-1 py-0.5 text-[10px]">
-            YANDEX_CLIENT_ID
-          </code>{" "}
-          и{" "}
-          <code className="rounded bg-[var(--mc-bg-elevated)] px-1 py-0.5 text-[10px]">
-            YANDEX_CLIENT_SECRET
-          </code>{" "}
-          в{" "}
-          <code className="rounded bg-[var(--mc-bg-elevated)] px-1 py-0.5 text-[10px]">
-            .env
-          </code>
-          .
-        </p>
-      )}
     </div>
   );
 }
