@@ -62,7 +62,6 @@ export function BottomStatusBar() {
             <>
               <CheckCircle2 className="h-3.5 w-3.5 text-[var(--mc-success-text)]" />
               <span className="hidden sm:inline text-[var(--mc-success-text)]">Сохранено</span>
-              <span className="hidden lg:inline text-[var(--mc-success-text)]"> (SQLite)</span>
             </>
           )}
           {saveStatus === "unsaved" && (
