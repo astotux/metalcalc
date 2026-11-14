@@ -646,6 +646,7 @@ export default function SceneCanvas3D() {
       <Canvas
         shadows
         dpr={[1, 2]}
+        style={{ touchAction: "none" }}
         camera={{ fov: 42, near: 0.05, far: 100, position: [2.4, 1.8, 2.4] }}
         onPointerMissed={() => {
           if (!isDrawingTool) clearSelection();
@@ -847,14 +848,19 @@ export default function SceneCanvas3D() {
       </Canvas>
 
       {/* Подсказка по управлению в 3D */}
-      <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap items-center gap-2 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/90 px-2.5 py-1 text-[11px] text-[var(--mc-text-muted)]">
+      <div className="pointer-events-none absolute right-3 bottom-3 left-3 flex flex-wrap items-center gap-2 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/90 px-2.5 py-1 text-[11px] text-[var(--mc-text-muted)] sm:right-auto">
         <span>
           <strong style={{ color: palette.axisXText }}>X</strong>{" "}
           <strong style={{ color: palette.axisYText }}>Y</strong>{" "}
-          <strong style={{ color: palette.axisZText }}>Z</strong> — стрелки для перемещения в 3D
+          <strong style={{ color: palette.axisZText }}>Z</strong> — перемещение в 3D
         </span>
         <span className="text-[var(--mc-border-strong)]">·</span>
-        <span>Клик по точке на трубе — тянуть конец · ЛКМ — вращение · ПКМ — панорама</span>
+        <span className="hidden lg:inline">
+          Клик по точке на трубе — тянуть конец · ЛКМ — вращение · ПКМ — панорама
+        </span>
+        <span className="lg:hidden">
+          1 палец — вращение · 2 пальца — зум и панорама
+        </span>
       </div>
     </div>
   );

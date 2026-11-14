@@ -12,6 +12,8 @@ import {
   Layers,
   Loader2,
   Moon,
+  PanelLeft,
+  PanelRight,
   Redo2,
   Save,
   Settings,
@@ -23,10 +25,13 @@ import { AccountHeaderBadge } from "@/components/auth/AccountHeaderBadge";
 import { downloadProjectExcel, downloadProjectPdf } from "@/features/export/exportClient";
 import { useProjectStore } from "@/store/useProjectStore";
 import { useThemeStore } from "@/store/useThemeStore";
+import { useWorkspaceUiStore } from "@/store/useWorkspaceUiStore";
 
 export function TopToolbar() {
   const project = useProjectStore((s) => s.project);
   const saveStatus = useProjectStore((s) => s.saveStatus);
+  const selectedElementIds = useProjectStore((s) => s.selectedElementIds);
+  const selectedJointId = useProjectStore((s) => s.selectedJointId);
   const historyPastCount = useProjectStore((s) => s.historyPast.length);
   const historyFutureCount = useProjectStore((s) => s.historyFuture.length);
 
@@ -38,6 +43,17 @@ export function TopToolbar() {
   const setViewMode = useProjectStore((s) => s.setViewMode);
   const theme = useThemeStore((s) => s.theme);
   const setTheme = useThemeStore((s) => s.setTheme);
+
+  const leftPanelOpen = useWorkspaceUiStore((s) => s.leftPanelOpen);
+  const rightPanelOpen = useWorkspaceUiStore((s) => s.rightPanelOpen);
+  const leftDrawerOpen = useWorkspaceUiStore((s) => s.leftDrawerOpen);
+  const rightDrawerOpen = useWorkspaceUiStore((s) => s.rightDrawerOpen);
+  const toggleLeftPanel = useWorkspaceUiStore((s) => s.toggleLeftPanel);
+  const toggleRightPanel = useWorkspaceUiStore((s) => s.toggleRightPanel);
+  const toggleLeftDrawer = useWorkspaceUiStore((s) => s.toggleLeftDrawer);
+  const toggleRightDrawer = useWorkspaceUiStore((s) => s.toggleRightDrawer);
+
+  const hasSelection = selectedElementIds.length > 0 || selectedJointId !== null;
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(project.name);
@@ -80,26 +96,54 @@ export function TopToolbar() {
 
   return (
     <>
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--mc-border)] bg-[var(--mc-bg-panel)] px-3">
-        {/* Левая группа: логотип, название и файловые операции */}
-        <div className="flex items-center gap-2 min-w-0">
+      <header className="flex h-12 shrink-0 items-center justify-between gap-1.5 border-b border-[var(--mc-border)] bg-[var(--mc-bg-panel)] px-2 lg:px-3">
+        {/* Левая группа: панель инструментов, логотип, название и файловые операции */}
+        <div className="flex min-w-0 items-center gap-1.5 lg:gap-2">
+          {/* Переключатель левой панели (шторка на < lg, сворачивание на >= lg) */}
+          <button
+            type="button"
+            onClick={toggleLeftDrawer}
+            aria-pressed={leftDrawerOpen}
+            title="Инструменты и профили"
+            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border transition-colors lg:hidden ${
+              leftDrawerOpen
+                ? "border-[var(--mc-brand-light)] bg-[var(--mc-brand)] text-[var(--mc-brand-text)]"
+                : "border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
+            }`}
+          >
+            <PanelLeft className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={toggleLeftPanel}
+            aria-pressed={leftPanelOpen}
+            title={leftPanelOpen ? "Свернуть левую панель" : "Показать левую панель"}
+            className={`hidden h-7 w-7 shrink-0 items-center justify-center rounded border transition-colors lg:inline-flex ${
+              leftPanelOpen
+                ? "border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] text-[var(--mc-brand-inline)]"
+                : "border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] text-[var(--mc-text-muted)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
+            }`}
+          >
+            <PanelLeft className="h-3.5 w-3.5" />
+          </button>
+
           <Link
             href="/"
-            className="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-[var(--mc-bg-hover)]"
+            className="flex shrink-0 items-center gap-2 rounded px-1 py-1 hover:bg-[var(--mc-bg-hover)] lg:px-1.5"
             title="MetalCalc"
           >
             <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--mc-brand)] text-xs font-bold text-[var(--mc-brand-text)] shadow-xs">
               MC
             </div>
-            <span className="hidden text-sm font-semibold tracking-tight text-[var(--mc-text)] sm:inline">
+            <span className="hidden text-sm font-semibold tracking-tight text-[var(--mc-text)] xl:inline">
               MetalCalc
             </span>
           </Link>
 
-          <div className="h-5 w-px bg-[var(--mc-border)]" />
+          <div className="h-5 w-px shrink-0 bg-[var(--mc-border)]" />
 
           {/* Название проекта */}
-          <div className="flex items-center gap-1.5 min-w-0">
+          <div className="flex min-w-0 items-center gap-1.5">
             {isEditingTitle ? (
               <input
                 type="text"
@@ -114,7 +158,7 @@ export function TopToolbar() {
                   }
                 }}
                 autoFocus
-                className="w-48 rounded border border-[var(--mc-brand-light)] bg-[var(--mc-bg-input)] px-2 py-0.5 text-xs text-[var(--mc-text)] outline-none"
+                className="w-32 rounded border border-[var(--mc-brand-light)] bg-[var(--mc-bg-input)] px-2 py-0.5 text-xs text-[var(--mc-text)] outline-none sm:w-40 lg:w-48"
               />
             ) : (
               <button
@@ -123,7 +167,7 @@ export function TopToolbar() {
                   setTitleDraft(project.name);
                   setIsEditingTitle(true);
                 }}
-                className="truncate max-w-[200px] rounded px-2 py-1 text-xs font-medium text-[var(--mc-text)] hover:bg-[var(--mc-bg-hover)]"
+                className="max-w-[96px] truncate rounded px-1.5 py-1 text-xs font-medium text-[var(--mc-text)] hover:bg-[var(--mc-bg-hover)] sm:max-w-[140px] lg:max-w-[180px] xl:max-w-[200px]"
                 title="Нажмите, чтобы переименовать проект"
               >
                 {project.name}
@@ -131,40 +175,40 @@ export function TopToolbar() {
             )}
 
             {project.isExample && (
-              <span className="hidden rounded border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--mc-brand-inline)] md:inline">
+              <span className="hidden rounded border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--mc-brand-inline)] xl:inline">
                 Пример
               </span>
             )}
           </div>
 
-          <div className="h-5 w-px bg-[var(--mc-border)]" />
+          <div className="h-5 w-px shrink-0 bg-[var(--mc-border)]" />
 
           {/* Операции с проектом */}
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-0.5 lg:gap-1">
             <button
               type="button"
               onClick={handleCreateProject}
-              className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
+              className="inline-flex items-center gap-1.5 rounded px-1.5 py-1.5 text-xs text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)] lg:px-2"
               title="Создать новый проект"
             >
               <FilePlus2 className="h-3.5 w-3.5" />
-              <span className="hidden lg:inline">Создать</span>
+              <span className="hidden xl:inline">Создать</span>
             </button>
 
             <Link
               href="/projects"
-              className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
+              className="inline-flex items-center gap-1.5 rounded px-1.5 py-1.5 text-xs text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)] lg:px-2"
               title="Открыть список проектов"
             >
               <FolderOpen className="h-3.5 w-3.5" />
-              <span className="hidden lg:inline">Открыть</span>
+              <span className="hidden xl:inline">Открыть</span>
             </Link>
 
             <button
               type="button"
               onClick={() => void saveCurrentProject()}
               disabled={saveStatus === "saving"}
-              className={`inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs transition-colors disabled:opacity-60 ${
+              className={`inline-flex items-center gap-1.5 rounded px-1.5 py-1.5 text-xs transition-colors disabled:opacity-60 lg:px-2 ${
                 saveStatus === "unsaved"
                   ? "bg-[var(--mc-brand-soft)] text-[var(--mc-brand-inline)] hover:bg-[var(--mc-brand)] hover:text-[var(--mc-brand-text)]"
                   : saveStatus === "error"
@@ -174,7 +218,7 @@ export function TopToolbar() {
               title="Сохранить проект в SQLite"
             >
               <Save className="h-3.5 w-3.5" />
-              <span className="hidden lg:inline">
+              <span className="hidden xl:inline">
                 {saveStatus === "saving" ? "Сохранение..." : "Сохранить"}
               </span>
             </button>
@@ -182,13 +226,13 @@ export function TopToolbar() {
         </div>
 
         {/* Центральная группа: Отмена / Повтор и 2D / 3D */}
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 lg:gap-2">
           <div className="flex items-center rounded border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-0.5">
             <button
               type="button"
               onClick={undo}
               disabled={historyPastCount === 0}
-              className="rounded p-1 text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] disabled:opacity-35 disabled:hover:bg-transparent"
+              className="rounded p-1.5 text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] disabled:opacity-35 disabled:hover:bg-transparent lg:p-1"
               title="Отменить (Undo)"
             >
               <Undo2 className="h-3.5 w-3.5" />
@@ -197,7 +241,7 @@ export function TopToolbar() {
               type="button"
               onClick={redo}
               disabled={historyFutureCount === 0}
-              className="rounded p-1 text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] disabled:opacity-35 disabled:hover:bg-transparent"
+              className="rounded p-1.5 text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] disabled:opacity-35 disabled:hover:bg-transparent lg:p-1"
               title="Повторить (Redo)"
             >
               <Redo2 className="h-3.5 w-3.5" />
@@ -212,7 +256,7 @@ export function TopToolbar() {
             <button
               type="button"
               onClick={() => setViewMode("2d")}
-              className={`inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors lg:px-2.5 ${
                 viewMode === "2d"
                   ? "bg-[var(--mc-brand)] text-[var(--mc-brand-text)] shadow-xs"
                   : "text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
@@ -224,7 +268,7 @@ export function TopToolbar() {
             <button
               type="button"
               onClick={() => setViewMode("3d")}
-              className={`inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors lg:px-2.5 ${
                 viewMode === "3d"
                   ? "bg-[var(--mc-brand)] text-[var(--mc-brand-text)] shadow-xs"
                   : "text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
@@ -236,8 +280,8 @@ export function TopToolbar() {
           </div>
         </div>
 
-        {/* Правая группа: Тема, Настройки и Экспорт / Смета */}
-        <div className="flex items-center gap-1.5">
+        {/* Правая группа: Тема, Настройки, Аккаунт, Экспорт / Смета и правая панель */}
+        <div className="flex shrink-0 items-center gap-1 lg:gap-1.5">
           <div
             className="flex items-center rounded border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-0.5"
             role="group"
@@ -273,11 +317,11 @@ export function TopToolbar() {
 
           <Link
             href="/settings"
-            className="inline-flex items-center gap-1.5 rounded px-2 py-1.5 text-xs text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
+            className="inline-flex items-center gap-1.5 rounded px-1.5 py-1.5 text-xs text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)] lg:px-2"
             title="Настройки расчётов и сетки"
           >
             <Settings className="h-3.5 w-3.5" />
-            <span className="hidden md:inline">Настройки</span>
+            <span className="hidden xl:inline">Настройки</span>
           </Link>
 
           <AccountHeaderBadge />
@@ -315,11 +359,46 @@ export function TopToolbar() {
           <button
             type="button"
             onClick={() => setEstimateOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded bg-[var(--mc-brand)] px-2.5 py-1.5 text-xs font-medium text-[var(--mc-brand-text)] hover:bg-[var(--mc-brand-light)] transition-colors shadow-xs"
+            className="inline-flex items-center gap-1.5 rounded bg-[var(--mc-brand)] px-2 py-1.5 text-xs font-medium text-[var(--mc-brand-text)] hover:bg-[var(--mc-brand-light)] transition-colors shadow-xs lg:px-2.5"
             title="Открыть смету и экспорт"
           >
             <Download className="h-3.5 w-3.5" />
-            <span>Экспорт / Смета</span>
+            <span className="hidden sm:inline lg:hidden">Смета</span>
+            <span className="hidden lg:inline">Экспорт / Смета</span>
+          </button>
+
+          {/* Переключатель правой панели инспектора */}
+          <button
+            type="button"
+            onClick={toggleRightDrawer}
+            aria-pressed={rightDrawerOpen}
+            title="Свойства, стыки и смета"
+            className={`relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border transition-colors lg:hidden ${
+              rightDrawerOpen
+                ? "border-[var(--mc-brand-light)] bg-[var(--mc-brand)] text-[var(--mc-brand-text)]"
+                : "border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
+            }`}
+          >
+            <PanelRight className="h-4 w-4" />
+            {hasSelection && !rightDrawerOpen && (
+              <span
+                className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-[var(--mc-brand-light)] ring-2 ring-[var(--mc-bg-panel)]"
+                aria-hidden="true"
+              />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={toggleRightPanel}
+            aria-pressed={rightPanelOpen}
+            title={rightPanelOpen ? "Свернуть правую панель" : "Показать правую панель"}
+            className={`hidden h-7 w-7 shrink-0 items-center justify-center rounded border transition-colors lg:inline-flex ${
+              rightPanelOpen
+                ? "border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] text-[var(--mc-brand-inline)]"
+                : "border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] text-[var(--mc-text-muted)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
+            }`}
+          >
+            <PanelRight className="h-3.5 w-3.5" />
           </button>
         </div>
       </header>

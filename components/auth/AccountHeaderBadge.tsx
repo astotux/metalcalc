@@ -68,7 +68,7 @@ export function AccountHeaderBadge() {
         {initial}
       </div>
       <span
-        className="hidden max-w-[110px] truncate text-[var(--mc-text)] sm:inline"
+        className="hidden max-w-[96px] truncate text-[var(--mc-text)] xl:inline"
         title={`${user.name} — ${user.email}`}
       >
         {user.name}

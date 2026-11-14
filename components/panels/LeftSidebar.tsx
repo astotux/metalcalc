@@ -24,6 +24,7 @@ import {
   formatProfileDimensions,
 } from "@/lib/calculations/estimate";
 import { useProjectStore } from "@/store/useProjectStore";
+import { useWorkspaceUiStore } from "@/store/useWorkspaceUiStore";
 import type { DrawingTool } from "@/types";
 
 const TOOLS: { id: DrawingTool; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -49,6 +50,7 @@ export function LeftSidebar() {
   const setActiveProfileId = useProjectStore((s) => s.setActiveProfileId);
   const assignProfileToElements = useProjectStore((s) => s.assignProfileToElements);
   const addElement = useProjectStore((s) => s.addElement);
+  const setLeftDrawerOpen = useWorkspaceUiStore((s) => s.setLeftDrawerOpen);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [shapeFilter, setShapeFilter] = useState<SidebarShapeFilter>("all");
@@ -116,7 +118,7 @@ export function LeftSidebar() {
 
   return (
     <>
-      <aside className="flex w-72 shrink-0 flex-col border-r border-[var(--mc-border)] bg-[var(--mc-bg-panel)] overflow-y-auto">
+      <aside className="flex h-full w-full flex-col bg-[var(--mc-bg-panel)] overflow-y-auto">
         {/* Секция 1: Инструменты черчения */}
         <section className="border-b border-[var(--mc-border)] p-3">
           <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-text-muted)]">
@@ -130,7 +132,10 @@ export function LeftSidebar() {
                 <button
                   key={tool.id}
                   type="button"
-                  onClick={() => setActiveTool(tool.id)}
+                  onClick={() => {
+                    setActiveTool(tool.id);
+                    setLeftDrawerOpen(false);
+                  }}
                   className={`flex flex-col items-center justify-center gap-1 rounded border px-1 py-2 text-[10px] transition-colors ${
                     isActive
                       ? "border-[var(--mc-brand-light)] bg-[var(--mc-brand)] text-[var(--mc-brand-text)] shadow-xs"

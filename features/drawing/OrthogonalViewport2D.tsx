@@ -196,6 +196,12 @@ export const OrthogonalViewport2D = forwardRef<
   const [rectDraft, setRectDraft] = useState<DraftVertex | null>(null);
   const [dragAction, setDragAction] = useState<DragAction | null>(null);
 
+  const pinchRef = useRef<{
+    startDist: number;
+    startZoomFactor: number;
+    worldAtCenter: Point2D;
+  } | null>(null);
+
   const zoomFactor = isPrimary
     ? clampZoomFactor((project.displaySettings.zoomPercent || 100) / 100)
     : localZoomFactor;
@@ -451,18 +457,20 @@ export const OrthogonalViewport2D = forwardRef<
     [plane]
   );
 
-  const handleStageMouseDown = (event: Konva.KonvaEventObject<MouseEvent>) => {
-    onFocus();
-    const stage = stageRef.current;
-    if (!stage) return;
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return;
-
-    const nativeEvt = event.evt;
-
+  const handlePointerDownAt = (
+    pointer: Point2D,
+    opts: {
+      button: number;
+      shiftKey: boolean;
+      ctrlKey: boolean;
+      metaKey: boolean;
+      altKey: boolean;
+      preventDefault?: () => void;
+    }
+  ) => {
     // Средняя кнопка или Пробел + ЛКМ -> Панорамирование
-    if (nativeEvt.button === 1 || (nativeEvt.button === 0 && isSpacePressed)) {
-      nativeEvt.preventDefault();
+    if (opts.button === 1 || (opts.button === 0 && isSpacePressed)) {
+      opts.preventDefault?.();
       setDragAction({
         kind: "pan",
         startScreen: { x: pointer.x, y: pointer.y },
@@ -471,7 +479,7 @@ export const OrthogonalViewport2D = forwardRef<
       return;
     }
 
-    if (nativeEvt.button !== 0) return;
+    if (opts.button !== 0) return;
 
     const rawWorld = screenToWorld(pointer.x, pointer.y);
 
@@ -579,7 +587,7 @@ export const OrthogonalViewport2D = forwardRef<
 
     // Инструменты Выделить / Переместить / Копировать / Изменить длину
     const hitEl = findTopElementAt(rawWorld);
-    const additive = nativeEvt.shiftKey || nativeEvt.ctrlKey || nativeEvt.metaKey;
+    const additive = opts.shiftKey || opts.ctrlKey || opts.metaKey;
 
     if (hitEl) {
       let nextTargetIds = selectedElementIds;
@@ -604,7 +612,7 @@ export const OrthogonalViewport2D = forwardRef<
           targetIds: nextTargetIds,
           anchorWorldMm: snappedAnchor.point,
           deltaMm: { x: 0, y: 0 },
-          copyMode: activeTool === "copy" || nativeEvt.altKey,
+          copyMode: activeTool === "copy" || opts.altKey,
         });
       }
       return;
@@ -622,11 +630,24 @@ export const OrthogonalViewport2D = forwardRef<
     });
   };
 
-  const handleStageMouseMove = () => {
+  const handleStageMouseDown = (event: Konva.KonvaEventObject<MouseEvent>) => {
+    onFocus();
     const stage = stageRef.current;
     if (!stage) return;
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
+    const nativeEvt = event.evt;
+    handlePointerDownAt(pointer, {
+      button: nativeEvt.button,
+      shiftKey: nativeEvt.shiftKey,
+      ctrlKey: nativeEvt.ctrlKey,
+      metaKey: nativeEvt.metaKey,
+      altKey: nativeEvt.altKey,
+      preventDefault: () => nativeEvt.preventDefault(),
+    });
+  };
+
+  const handlePointerMoveAt = (pointer: Point2D) => {
 
     if (dragAction?.kind === "pan") {
       const dx = pointer.x - dragAction.startScreen.x;
@@ -710,6 +731,99 @@ export const OrthogonalViewport2D = forwardRef<
     if (!dragAction) {
       const hovered = findTopElementAt(rawWorld);
       setHoveredElementId(hovered?.id ?? null);
+    }
+  };
+
+  const handleStageMouseMove = () => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
+    handlePointerMoveAt(pointer);
+  };
+
+  const getTouchStagePoint = (touch: Touch): Point2D | null => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+  };
+
+  const handleStageTouchStart = (event: Konva.KonvaEventObject<TouchEvent>) => {
+    onFocus();
+    const touches = event.evt.touches;
+    if (touches.length === 2) {
+      event.evt.preventDefault();
+      const p1 = getTouchStagePoint(touches[0]);
+      const p2 = getTouchStagePoint(touches[1]);
+      if (!p1 || !p2) return;
+      const dist = Math.max(8, Math.hypot(p2.x - p1.x, p2.y - p1.y));
+      const center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+      setDragAction(null);
+      pinchRef.current = {
+        startDist: dist,
+        startZoomFactor: zoomFactor,
+        worldAtCenter: screenToWorld(center.x, center.y),
+      };
+      return;
+    }
+
+    if (touches.length === 1) {
+      event.evt.preventDefault();
+      pinchRef.current = null;
+      const stage = stageRef.current;
+      stage?.setPointersPositions(event.evt);
+      const pointer = stage?.getPointerPosition() ?? getTouchStagePoint(touches[0]);
+      if (!pointer) return;
+      handlePointerDownAt(pointer, {
+        button: 0,
+        shiftKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+      });
+    }
+  };
+
+  const handleStageTouchMove = (event: Konva.KonvaEventObject<TouchEvent>) => {
+    const touches = event.evt.touches;
+    if (touches.length === 2 && pinchRef.current) {
+      event.evt.preventDefault();
+      const p1 = getTouchStagePoint(touches[0]);
+      const p2 = getTouchStagePoint(touches[1]);
+      if (!p1 || !p2) return;
+      const dist = Math.max(8, Math.hypot(p2.x - p1.x, p2.y - p1.y));
+      const center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+      const rawNextZoom = clampZoomFactor(
+        pinchRef.current.startZoomFactor * (dist / pinchRef.current.startDist)
+      );
+      const nextPercent = Math.max(10, Math.min(400, Math.round(rawNextZoom * 100)));
+      const effectiveZoom = isPrimary ? nextPercent / 100 : rawNextZoom;
+      const nextScale = effectiveZoom * BASE_PX_PER_MM;
+
+      updateZoom(effectiveZoom);
+      setPanPx({
+        x: center.x - pinchRef.current.worldAtCenter.x * nextScale,
+        y: center.y - pinchRef.current.worldAtCenter.y * vSign * nextScale,
+      });
+      return;
+    }
+
+    if (touches.length === 1 && !pinchRef.current) {
+      event.evt.preventDefault();
+      const stage = stageRef.current;
+      stage?.setPointersPositions(event.evt);
+      const pointer = stage?.getPointerPosition() ?? getTouchStagePoint(touches[0]);
+      if (!pointer) return;
+      handlePointerMoveAt(pointer);
+    }
+  };
+
+  const handleStageTouchEnd = (event: Konva.KonvaEventObject<TouchEvent>) => {
+    if (event.evt.touches.length < 2) {
+      pinchRef.current = null;
+    }
+    if (event.evt.touches.length === 0) {
+      handleStageMouseUp();
     }
   };
 
@@ -928,7 +1042,8 @@ export const OrthogonalViewport2D = forwardRef<
       ref={containerRef}
       data-testid={`viewport-${plane}`}
       onMouseDown={onFocus}
-      style={{ cursor: canvasCursor, backgroundColor: palette.canvasBg }}
+      onTouchStart={onFocus}
+      style={{ cursor: canvasCursor, backgroundColor: palette.canvasBg, touchAction: "none" }}
       className={`relative h-full w-full overflow-hidden select-none transition-shadow ${
         isFocused
           ? "ring-1 ring-inset ring-[var(--mc-brand-border)]"
@@ -936,23 +1051,23 @@ export const OrthogonalViewport2D = forwardRef<
       }`}
     >
       {/* Заголовок вида и кнопки масштабирования */}
-      <div className="pointer-events-none absolute left-2.5 right-2.5 top-2.5 z-10 flex items-center justify-between gap-2">
+      <div className="pointer-events-none absolute left-2 right-2 top-2 z-10 flex items-center justify-between gap-1.5 sm:left-2.5 sm:right-2.5 sm:top-2.5 sm:gap-2">
         <div
-          className={`pointer-events-auto flex items-center gap-1.5 rounded border px-2 py-1 text-[11px] shadow-md ${
+          className={`pointer-events-auto flex min-w-0 items-center gap-1.5 rounded border px-2 py-1 text-[11px] shadow-md ${
             isFocused
               ? "border-[var(--mc-brand-border)] bg-[var(--mc-bg-panel)]/95 text-[var(--mc-text)]"
               : "border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/95 text-[var(--mc-text-muted)]"
           }`}
         >
-          <span className="font-semibold text-[var(--mc-text)]">{title}</span>
+          <span className="truncate font-semibold text-[var(--mc-text)]">{title}</span>
           {subtitle && (
-            <span className="hidden text-[10px] text-[var(--mc-text-muted)] sm:inline">
+            <span className="hidden shrink-0 text-[10px] text-[var(--mc-text-muted)] xl:inline">
               · {subtitle}
             </span>
           )}
         </div>
 
-        <div className="pointer-events-auto flex items-center rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/95 p-0.5 shadow-md">
+        <div className="pointer-events-auto flex shrink-0 items-center rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/95 p-0.5 shadow-md">
           <button
             type="button"
             onClick={(e) => {
@@ -1019,7 +1134,12 @@ export const OrthogonalViewport2D = forwardRef<
         onMouseDown={handleStageMouseDown}
         onMouseMove={handleStageMouseMove}
         onMouseUp={handleStageMouseUp}
+        onTouchStart={handleStageTouchStart}
+        onTouchMove={handleStageTouchMove}
+        onTouchEnd={handleStageTouchEnd}
+        onTouchCancel={handleStageTouchEnd}
         onDblClick={handleStageDoubleClick}
+        onDblTap={handleStageDoubleClick}
         onWheel={handleWheel}
         onContextMenu={(e) => e.evt.preventDefault()}
       >

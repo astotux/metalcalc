@@ -91,8 +91,8 @@ export function EstimateModal({ open, onClose }: EstimateModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-xs">
-      <div className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-[var(--mc-border-strong)] bg-[var(--mc-bg-panel)] shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3 sm:p-4 backdrop-blur-xs">
+      <div className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-[var(--mc-border-strong)] bg-[var(--mc-bg-panel)] shadow-2xl">
         <div className="flex items-center justify-between border-b border-[var(--mc-border)] px-4 py-3">
           <div className="flex items-center gap-2">
             <FileSpreadsheet className="h-4 w-4 text-[var(--mc-brand-light)]" />

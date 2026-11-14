@@ -225,8 +225,8 @@ function ProfileCatalogDialogContent({
   const wallPx = Math.max(1.5, Math.min(rectW / 3, rectH / 3, watchedWall * svgScale));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-xs">
-      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-[var(--mc-border-strong)] bg-[var(--mc-bg-panel)] text-[var(--mc-text)] shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3 sm:p-4 backdrop-blur-xs">
+      <div className="flex max-h-[92dvh] w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-[var(--mc-border-strong)] bg-[var(--mc-bg-panel)] text-[var(--mc-text)] shadow-2xl">
         {/* Шапка */}
         <div className="flex items-center justify-between border-b border-[var(--mc-border)] px-4 py-3">
           <div>
@@ -248,7 +248,7 @@ function ProfileCatalogDialogContent({
         </div>
 
         {/* Тело модального окна */}
-        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-12">
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-12 lg:overflow-hidden">
           {/* Левая часть: поиск, фильтры и список */}
           <div className="flex min-h-0 flex-col border-b border-[var(--mc-border)] lg:col-span-7 lg:border-b-0 lg:border-r">
             <div className="space-y-2.5 border-b border-[var(--mc-border)] p-3">

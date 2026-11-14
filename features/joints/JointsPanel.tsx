@@ -159,7 +159,7 @@ export function SelectedJointInspector({ joint }: SelectedJointInspectorProps) {
   );
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l border-[var(--mc-border)] bg-[var(--mc-bg-panel)] overflow-y-auto">
+    <aside className="flex h-full w-full flex-col bg-[var(--mc-bg-panel)] overflow-y-auto">
       <div className="flex items-center justify-between border-b border-[var(--mc-border)] px-3 py-2.5">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-warning-text)]">

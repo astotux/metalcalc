@@ -56,7 +56,7 @@ function SelectedElementInspector({ selectedElement }: SelectedElementInspectorP
   };
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l border-[var(--mc-border)] bg-[var(--mc-bg-panel)] overflow-y-auto">
+    <aside className="flex h-full w-full flex-col bg-[var(--mc-bg-panel)] overflow-y-auto">
       <div className="border-b border-[var(--mc-border)] px-3 py-2.5">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-text-muted)]">
           Свойства элемента
@@ -335,7 +335,7 @@ function MultiSelectionInspector({ selectedElementIds }: MultiSelectionInspector
   });
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-3 space-y-3 overflow-y-auto">
+    <aside className="flex h-full w-full flex-col bg-[var(--mc-bg-panel)] p-3 space-y-3 overflow-y-auto">
       <div>
         <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-text-muted)]">
           Выбрано элементов: {selectedElementIds.length}
@@ -500,7 +500,7 @@ export function RightInspector() {
 
   // Ничего не выбрано: вкладки Смета / Соединения / Сетка и проект
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l border-[var(--mc-border)] bg-[var(--mc-bg-panel)] overflow-hidden">
+    <aside className="flex h-full w-full flex-col bg-[var(--mc-bg-panel)] overflow-hidden">
       <div className="grid grid-cols-3 border-b border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-1">
         {(
           [

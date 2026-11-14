@@ -205,11 +205,13 @@ export default function KonvaCanvas2D() {
         </div>
       </div>
 
-      {/* Рабочая область: слева главный вид XY, справа сверху спереди (XZ), справа снизу сбоку (YZ) */}
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      {/* Рабочая область: на >= lg слева главный вид XY и справа стеком XZ/YZ; на планшетах (< lg) XY сверху, XZ и YZ рядом снизу */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
         <div
           className={`min-h-0 min-w-0 transition-all ${
-            layoutMode === "three" ? "w-[62%] border-r border-[var(--mc-border)]" : "w-full"
+            layoutMode === "three"
+              ? "h-[56%] w-full border-b border-[var(--mc-border)] lg:h-full lg:w-[62%] lg:border-b-0 lg:border-r"
+              : "h-full w-full"
           }`}
         >
           <OrthogonalViewport2D
@@ -224,8 +226,8 @@ export default function KonvaCanvas2D() {
         </div>
 
         {layoutMode === "three" && (
-          <div className="flex min-h-0 w-[38%] min-w-0 flex-col">
-            <div className="min-h-0 flex-1 border-b border-[var(--mc-border)]">
+          <div className="grid h-[44%] w-full min-h-0 min-w-0 grid-cols-2 lg:flex lg:h-full lg:w-[38%] lg:flex-col">
+            <div className="min-h-0 min-w-0 border-r border-[var(--mc-border)] lg:flex-1 lg:border-r-0 lg:border-b">
               <OrthogonalViewport2D
                 ref={xzRef}
                 plane="xz"
@@ -235,7 +237,7 @@ export default function KonvaCanvas2D() {
                 onFocus={() => setFocusedPlane("xz")}
               />
             </div>
-            <div className="min-h-0 flex-1">
+            <div className="min-h-0 min-w-0 lg:flex-1">
               <OrthogonalViewport2D
                 ref={yzRef}
                 plane="yz"
