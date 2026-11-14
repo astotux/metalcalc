@@ -1,9 +1,9 @@
-import { MetalCalcEditor } from "@/components/editor/MetalCalcEditor";
-import { requireAuthenticatedPageUser } from "@/lib/auth/requirePageUser";
+import { LandingPageClient } from "@/components/landing/LandingPageClient";
+import { getSessionUserFromCookies } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  await requireAuthenticatedPageUser("/");
-  return <MetalCalcEditor />;
+  const user = await getSessionUserFromCookies();
+  return <LandingPageClient initialUser={user} />;
 }

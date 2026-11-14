@@ -1,6 +1,7 @@
 "use client";
 
-import { Moon, Sun } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Moon, Sun } from "lucide-react";
 import { useThemeStore } from "@/store/useThemeStore";
 
 interface AuthShellProps {
@@ -16,13 +17,23 @@ export function AuthShell({ title, subtitle, children }: AuthShellProps) {
   return (
     <div className="min-h-screen bg-[var(--mc-bg-app)] text-[var(--mc-text)] flex flex-col">
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--mc-border)] bg-[var(--mc-bg-panel)] px-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--mc-brand)] text-xs font-bold text-[var(--mc-brand-text)] shadow-xs">
-            MC
-          </div>
-          <span className="text-sm font-semibold tracking-tight text-[var(--mc-text)]">
-            MetalCalc
-          </span>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            На главную
+          </Link>
+          <div className="h-4 w-px bg-[var(--mc-border)]" />
+          <Link href="/" className="flex items-center gap-2">
+            <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--mc-brand)] text-xs font-bold text-[var(--mc-brand-text)] shadow-xs">
+              MC
+            </div>
+            <span className="text-sm font-semibold tracking-tight text-[var(--mc-text)]">
+              MetalCalc
+            </span>
+          </Link>
         </div>
 
         <div

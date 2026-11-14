@@ -17,7 +17,7 @@ export async function GET(
   const origin = resolveRequestOrigin(request);
   const url = new URL(request.url);
   const returnToPage = url.searchParams.get("from") === "register" ? "/register" : "/login";
-  const nextPath = url.searchParams.get("next") || "/";
+  const nextPath = url.searchParams.get("next") || "/editor";
 
   if (!isSupportedOAuthProvider(provider)) {
     const target = new URL(returnToPage, origin);

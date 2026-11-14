@@ -11,7 +11,7 @@ interface OAuthButtonsProps {
 export function OAuthButtons({
   mode,
   oauthProviders,
-  nextPath = "/",
+  nextPath = "/editor",
 }: OAuthButtonsProps) {
   const verb = mode === "register" ? "Регистрация через" : "Войти через";
   const fromParam = mode === "register" ? "register" : "login";

@@ -77,7 +77,7 @@ export async function GET(
     const user = upsertOAuthUser(profile);
     const session = issueSessionForUser(user.id, true);
 
-    const destination = new URL(statePayload.nextPath || "/", origin);
+    const destination = new URL(statePayload.nextPath || "/editor", origin);
     const response = NextResponse.redirect(destination);
     response.cookies.set(OAUTH_STATE_COOKIE_NAME, "", {
       httpOnly: true,

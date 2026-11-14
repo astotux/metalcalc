@@ -26,8 +26,13 @@ export function AccountHeaderBadge() {
     try {
       await logout();
       resetForUserSession();
-      router.replace("/login");
-      router.refresh();
+      const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+      if (pathname === "/") {
+        router.refresh();
+      } else {
+        router.replace("/login");
+        router.refresh();
+      }
     } finally {
       setLoggingOut(false);
     }

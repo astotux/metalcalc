@@ -16,7 +16,7 @@ function LoginFormContent() {
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next")?.startsWith("/")
     ? searchParams.get("next")!
-    : "/";
+    : "/editor";
   const oauthError = searchParams.get("oauthError");
 
   const user = useAuthStore((s) => s.user);
@@ -208,7 +208,7 @@ function LoginFormContent() {
         Нет аккаунта?{" "}
         <Link
           href={
-            nextPath !== "/"
+            nextPath !== "/editor"
               ? `/register?next=${encodeURIComponent(nextPath)}`
               : "/register"
           }

@@ -17,7 +17,7 @@ function RegisterFormContent() {
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next")?.startsWith("/")
     ? searchParams.get("next")!
-    : "/";
+    : "/editor";
   const oauthError = searchParams.get("oauthError");
 
   const user = useAuthStore((s) => s.user);
@@ -249,7 +249,7 @@ function RegisterFormContent() {
         Уже есть аккаунт?{" "}
         <Link
           href={
-            nextPath !== "/" ? `/login?next=${encodeURIComponent(nextPath)}` : "/login"
+            nextPath !== "/editor" ? `/login?next=${encodeURIComponent(nextPath)}` : "/login"
           }
           className="font-medium text-[var(--mc-brand-inline)] hover:underline"
         >

@@ -105,7 +105,7 @@ export function createOAuthAuthorizationRequest(params: {
   authorizationUrl: string;
   stateCookieValue: string;
 } {
-  const { provider, request, nextPath = "/" } = params;
+  const { provider, request, nextPath = "/editor" } = params;
   const state = crypto.randomBytes(24).toString("base64url");
   const codeVerifier = crypto.randomBytes(32).toString("base64url");
   const codeChallenge = crypto
@@ -113,7 +113,7 @@ export function createOAuthAuthorizationRequest(params: {
     .update(codeVerifier)
     .digest("base64url");
 
-  const safeNext = nextPath.startsWith("/") ? nextPath : "/";
+  const safeNext = nextPath.startsWith("/") ? nextPath : "/editor";
   const payload: OAuthStatePayload = {
     provider,
     state,

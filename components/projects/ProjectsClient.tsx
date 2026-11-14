@@ -52,7 +52,7 @@ export function ProjectsClient() {
   const handleOpen = async (id: string) => {
     const ok = await openProjectById(id);
     if (ok) {
-      router.push("/");
+      router.push("/editor");
     }
   };
 
@@ -62,7 +62,7 @@ export function ProjectsClient() {
     const saved = await saveCurrentProject();
     if (saved) {
       setNewName("");
-      router.push("/");
+      router.push("/editor");
     }
   };
 
@@ -70,7 +70,7 @@ export function ProjectsClient() {
     loadExampleProject();
     const saved = await saveCurrentProject();
     if (saved) {
-      router.push("/");
+      router.push("/editor");
     }
   };
 
@@ -111,7 +111,7 @@ export function ProjectsClient() {
       <header className="flex h-12 items-center justify-between border-b border-[var(--mc-border)] bg-[var(--mc-bg-panel)] px-4">
         <div className="flex items-center gap-3">
           <Link
-            href="/"
+            href="/editor"
             className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
