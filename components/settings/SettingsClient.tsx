@@ -192,30 +192,6 @@ export function SettingsClient() {
             </label>
           </div>
         </section>
-
-        {/* Архитектура типов сечений */}
-        <section className="space-y-3 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-4">
-          <h2 className="text-sm font-semibold text-[var(--mc-text)]">
-            Поддерживаемые типы сечений металлопроката
-          </h2>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {PROFILE_SHAPE_CATALOG.map((shape) => (
-              <div
-                key={shape.type}
-                className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] p-2.5 text-xs"
-              >
-                <div className="font-medium text-[var(--mc-text)]">{shape.label}</div>
-                <div
-                  className={`mt-1 text-[11px] ${
-                    shape.implementedInMvp ? "text-[var(--mc-success-text)]" : "text-[var(--mc-text-subtle)]"
-                  }`}
-                >
-                  {shape.implementedInMvp ? "Активно в MVP" : "Заложено в архитектуру"}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
       </main>
     </div>
   );
