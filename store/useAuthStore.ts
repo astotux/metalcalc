@@ -17,7 +17,7 @@ let inFlightHydration: Promise<void> | null = null;
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  oauthProviders: { yandex: false, vk: false },
+  oauthProviders: { yandex: false },
   loading: false,
   initialized: false,
 
@@ -42,7 +42,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
         set({
           user: data.user ?? null,
-          oauthProviders: data.oauthProviders ?? { yandex: false, vk: false },
+          oauthProviders: data.oauthProviders ?? { yandex: false },
           loading: false,
           initialized: true,
         });

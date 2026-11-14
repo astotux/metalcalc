@@ -30,7 +30,6 @@ function extractCookieValue(setCookieHeader: string | null, name: string): strin
 describe("MetalCalc Auth (SQLite, Email Code, Password Strength, OAuth)", () => {
   const prevYandexId = process.env.YANDEX_CLIENT_ID;
   const prevYandexSecret = process.env.YANDEX_CLIENT_SECRET;
-  const prevVkId = process.env.VK_CLIENT_ID;
 
   beforeEach(() => {
     process.env.METALCALC_DB_PATH = ":memory:";
@@ -46,9 +45,6 @@ describe("MetalCalc Auth (SQLite, Email Code, Password Strength, OAuth)", () => 
 
     if (prevYandexSecret === undefined) delete process.env.YANDEX_CLIENT_SECRET;
     else process.env.YANDEX_CLIENT_SECRET = prevYandexSecret;
-
-    if (prevVkId === undefined) delete process.env.VK_CLIENT_ID;
-    else process.env.VK_CLIENT_ID = prevVkId;
   });
 
   it("evaluates password strength accurately and verifies scrypt hashes", () => {
@@ -180,10 +176,9 @@ describe("MetalCalc Auth (SQLite, Email Code, Password Strength, OAuth)", () => 
     expect(meAfterJson.user).toBeNull();
   });
 
-  it("handles Yandex and VK OAuth authorization URLs and account linking", async () => {
+  it("handles Yandex OAuth authorization URLs and account linking", async () => {
     delete process.env.YANDEX_CLIENT_ID;
     delete process.env.YANDEX_CLIENT_SECRET;
-    delete process.env.VK_CLIENT_ID;
 
     // Без ключей в env аккуратно редиректит на /login с понятным oauthError
     const unconfiguredYandex = await oauthStartRoute(
@@ -193,10 +188,17 @@ describe("MetalCalc Auth (SQLite, Email Code, Password Strength, OAuth)", () => 
     expect(unconfiguredYandex.status).toBe(307);
     expect(unconfiguredYandex.headers.get("location")).toContain("/login?oauthError=");
 
-    // С заданными ключами формирует корректный OAuth-редирект и PKCE/state cookie
+    // Неизвестный/удалённый провайдер (например, vk) отклоняется с oauthError
+    const unsupportedRes = await oauthStartRoute(
+      new Request("http://localhost:3000/api/auth/oauth/vk"),
+      { params: Promise.resolve({ provider: "vk" }) }
+    );
+    expect(unsupportedRes.status).toBe(307);
+    expect(unsupportedRes.headers.get("location")).toContain("/login?oauthError=");
+
+    // С заданными ключами формирует корректный OAuth-редирект и state cookie
     process.env.YANDEX_CLIENT_ID = "ya-client-id";
     process.env.YANDEX_CLIENT_SECRET = "ya-secret";
-    process.env.VK_CLIENT_ID = "vk-app-id";
 
     const yandexRes = await oauthStartRoute(
       new Request("http://localhost:3000/api/auth/oauth/yandex"),
@@ -206,16 +208,7 @@ describe("MetalCalc Auth (SQLite, Email Code, Password Strength, OAuth)", () => 
     expect(yandexRes.headers.get("location")).toContain("https://oauth.yandex.ru/authorize");
     expect(yandexRes.headers.get("set-cookie")).toContain("mc_oauth_state=");
 
-    const vkRes = await oauthStartRoute(
-      new Request("http://localhost:3000/api/auth/oauth/vk"),
-      { params: Promise.resolve({ provider: "vk" }) }
-    );
-    expect(vkRes.status).toBe(307);
-    const vkLocation = vkRes.headers.get("location") || "";
-    expect(vkLocation).toContain("https://id.vk.com/authorize");
-    expect(vkLocation).toContain("code_challenge_method=S256");
-
-    // Проверяем создание и связывание OAuth-профиля в SQLite
+    // Проверяем создание и повторный вход через OAuth-профиль в SQLite
     const oauthUser = upsertOAuthUser({
       provider: "yandex",
       providerUserId: "ya-user-42",
@@ -226,16 +219,15 @@ describe("MetalCalc Auth (SQLite, Email Code, Password Strength, OAuth)", () => 
     expect(oauthUser.email).toBe("oauth@yandex.ru");
     expect(oauthUser.providers).toContain("yandex");
 
-    const linkedVk = upsertOAuthUser({
-      provider: "vk",
-      providerUserId: "vk-user-99",
+    const repeatedLogin = upsertOAuthUser({
+      provider: "yandex",
+      providerUserId: "ya-user-42",
       email: "oauth@yandex.ru",
       emailVerified: true,
-      name: "Олег VK",
+      name: "Олег Яндекс",
     });
-    expect(linkedVk.id).toBe(oauthUser.id);
-    expect(linkedVk.providers).toContain("yandex");
-    expect(linkedVk.providers).toContain("vk");
+    expect(repeatedLogin.id).toBe(oauthUser.id);
+    expect(repeatedLogin.providers).toEqual(["yandex"]);
   });
 
   it("enforces strict per-user isolation for projects and profile catalogs across API routes", async () => {
@@ -251,7 +243,7 @@ describe("MetalCalc Auth (SQLite, Email Code, Password Strength, OAuth)", () => 
       name: "User A",
     });
     const userB = upsertOAuthUser({
-      provider: "vk",
+      provider: "yandex",
       providerUserId: "iso-user-b",
       email: "userb@example.com",
       emailVerified: true,

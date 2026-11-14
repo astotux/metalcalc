@@ -105,12 +105,6 @@ SMTP_FROM="MetalCalc <your-mailbox@yandex.ru>"
 # https://example.ru/api/auth/oauth/yandex/callback
 YANDEX_CLIENT_ID=
 YANDEX_CLIENT_SECRET=
-
-# --- Вход через VK ID (опционально) ---
-# В консоли https://id.vk.com/about/business/go укажите Callback URL:
-# https://example.ru/api/auth/oauth/vk/callback
-VK_CLIENT_ID=
-VK_CLIENT_SECRET=
 ```
 
 > **Про SMTP:** для Яндекс Почты и Gmail в `SMTP_PASS` нужно указывать **пароль приложения**, а не обычный пароль от аккаунта (включается в настройках безопасности почтового аккаунта при активной 2FA).
@@ -256,5 +250,5 @@ pm2 start metalcalc
 | Ошибка `Cannot find module 'node:sqlite'` | Обновите Node.js до **22.5+** (`node -v`). |
 | После входа сразу кидает обратно на `/login` | Проверьте, что сайт открыт по **HTTPS** (`https://...`), а не по `http://IP:3000`. |
 | Не приходят письма с кодом подтверждения | Проверьте логи `pm2 logs metalcalc`, убедитесь в корректности `SMTP_PASS` (пароль приложения) и открытом исходящем порту 465/587 у хостера. |
-| Ошибка OAuth Яндекс / VK (`redirect_uri` mismatch) | Убедитесь, что `NEXT_PUBLIC_APP_URL` в `.env` без `/` на конце совпадает с Callback URL в кабинете Яндекс/VK, и пересоберите (`npm run build && pm2 restart metalcalc`). |
+| Ошибка OAuth Яндекс (`redirect_uri` mismatch) | Убедитесь, что `NEXT_PUBLIC_APP_URL` в `.env` без `/` на конце совпадает с Callback URL в кабинете Яндекса, и пересоберите (`npm run build && pm2 restart metalcalc`). |
 | Ошибка сохранения проектов `SQLITE_READONLY` | Проверьте владельца и права на папку `data/` и файлы `data/metalcalc.db*` от того пользователя, под которым запущен `pm2`. |

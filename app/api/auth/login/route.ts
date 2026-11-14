@@ -45,7 +45,7 @@ export async function POST(request: Request) {
 
     if (!user.passwordHash) {
       const oauthNames = user.providers
-        .map((p) => (p === "yandex" ? "Яндекс ID" : p === "vk" ? "VK ID" : p))
+        .map((p) => (p === "yandex" ? "Яндекс ID" : p))
         .join(" / ");
       return NextResponse.json(
         {

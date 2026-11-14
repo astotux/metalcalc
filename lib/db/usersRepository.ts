@@ -27,7 +27,7 @@ function listProvidersForUser(userId: string, hasPassword: boolean): AuthProvide
   const db = getDatabase();
   const oauthRows = db
     .prepare("SELECT provider FROM oauth_accounts WHERE user_id = ?")
-    .all(userId) as Array<{ provider: "yandex" | "vk" }>;
+    .all(userId) as Array<{ provider: AuthProviderType }>;
 
   const providers: AuthProviderType[] = [];
   if (hasPassword) {

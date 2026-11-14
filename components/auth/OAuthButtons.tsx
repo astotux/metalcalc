@@ -18,8 +18,7 @@ export function OAuthButtons({
   const encodedNext = encodeURIComponent(nextPath);
 
   const anyMissing =
-    oauthProviders !== undefined &&
-    (!oauthProviders.yandex || !oauthProviders.vk);
+    oauthProviders !== undefined && !oauthProviders.yandex;
 
   return (
     <div className="space-y-2.5">
@@ -31,39 +30,32 @@ export function OAuthButtons({
         <div className="flex-grow border-t border-[var(--mc-border)]" />
       </div>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <a
-          href={`/api/auth/oauth/yandex?from=${fromParam}&next=${encodedNext}`}
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-3 py-2 text-xs font-medium text-[var(--mc-text)] transition-colors hover:bg-[var(--mc-bg-hover)]"
+      <a
+        href={`/api/auth/oauth/yandex?from=${fromParam}&next=${encodedNext}`}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-3 py-2 text-xs font-medium text-[var(--mc-text)] transition-colors hover:bg-[var(--mc-bg-hover)]"
+      >
+        <span
+          className="flex h-4 w-4 items-center justify-center rounded-full bg-[#FC3F1D] text-[10px] font-bold text-white"
+          aria-hidden="true"
         >
-          <span
-            className="flex h-4 w-4 items-center justify-center rounded-full bg-[#FC3F1D] text-[10px] font-bold text-white"
-            aria-hidden="true"
-          >
-            Я
-          </span>
-          <span>{verb} Яндекс</span>
-        </a>
-
-        <a
-          href={`/api/auth/oauth/vk?from=${fromParam}&next=${encodedNext}`}
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-3 py-2 text-xs font-medium text-[var(--mc-text)] transition-colors hover:bg-[var(--mc-bg-hover)]"
-        >
-          <span
-            className="flex h-4 w-4 items-center justify-center rounded bg-[#0077FF] text-[9px] font-bold text-white"
-            aria-hidden="true"
-          >
-            VK
-          </span>
-          <span>{verb} VK</span>
-        </a>
-      </div>
+          Я
+        </span>
+        <span>{verb} Яндекс</span>
+      </a>
 
       {anyMissing && (
         <p className="text-center text-[11px] text-[var(--mc-text-subtle)]">
-          Для работы OAuth на локальном сервере задайте ключи в{" "}
+          Для работы Яндекс OAuth задайте{" "}
           <code className="rounded bg-[var(--mc-bg-elevated)] px-1 py-0.5 text-[10px]">
-            .env.local
+            YANDEX_CLIENT_ID
+          </code>{" "}
+          и{" "}
+          <code className="rounded bg-[var(--mc-bg-elevated)] px-1 py-0.5 text-[10px]">
+            YANDEX_CLIENT_SECRET
+          </code>{" "}
+          в{" "}
+          <code className="rounded bg-[var(--mc-bg-elevated)] px-1 py-0.5 text-[10px]">
+            .env
           </code>
           .
         </p>

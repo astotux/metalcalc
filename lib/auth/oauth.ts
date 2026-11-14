@@ -2,14 +2,13 @@ import crypto from "node:crypto";
 import { getAuthSecret } from "@/lib/auth/password";
 import type { OAuthProvidersStatus } from "@/types";
 
-export type OAuthProviderId = "yandex" | "vk";
+export type OAuthProviderId = "yandex";
 
 export const OAUTH_STATE_COOKIE_NAME = "mc_oauth_state";
 
 export interface OAuthStatePayload {
   provider: OAuthProviderId;
   state: string;
-  codeVerifier: string;
   nextPath: string;
   exp: number;
 }
@@ -29,12 +28,11 @@ export function getOAuthConfigStatus(): OAuthProvidersStatus {
       process.env.YANDEX_CLIENT_ID?.trim() &&
         process.env.YANDEX_CLIENT_SECRET?.trim()
     ),
-    vk: Boolean(process.env.VK_CLIENT_ID?.trim()),
   };
 }
 
 export function isSupportedOAuthProvider(value: string): value is OAuthProviderId {
-  return value === "yandex" || value === "vk";
+  return value === "yandex";
 }
 
 export function resolveRequestOrigin(request: Request): string {
@@ -107,63 +105,34 @@ export function createOAuthAuthorizationRequest(params: {
 } {
   const { provider, request, nextPath = "/editor" } = params;
   const state = crypto.randomBytes(24).toString("base64url");
-  const codeVerifier = crypto.randomBytes(32).toString("base64url");
-  const codeChallenge = crypto
-    .createHash("sha256")
-    .update(codeVerifier)
-    .digest("base64url");
 
   const safeNext = nextPath.startsWith("/") ? nextPath : "/editor";
   const payload: OAuthStatePayload = {
     provider,
     state,
-    codeVerifier,
     nextPath: safeNext,
     exp: Date.now() + 1000 * 60 * 10, // 10 минут
   };
 
   const redirectUri = getOAuthRedirectUri(provider, request);
 
-  if (provider === "yandex") {
-    const clientId = process.env.YANDEX_CLIENT_ID?.trim();
-    const clientSecret = process.env.YANDEX_CLIENT_SECRET?.trim();
-    if (!clientId || !clientSecret) {
-      throw new Error(
-        "OAuth Яндекса не настроен: укажите YANDEX_CLIENT_ID и YANDEX_CLIENT_SECRET в .env.local."
-      );
-    }
-
-    const authUrl = new URL("https://oauth.yandex.ru/authorize");
-    authUrl.searchParams.set("response_type", "code");
-    authUrl.searchParams.set("client_id", clientId);
-    authUrl.searchParams.set("redirect_uri", redirectUri);
-    authUrl.searchParams.set("state", state);
-    authUrl.searchParams.set("scope", "login:email login:info login:avatar");
-
-    return {
-      authorizationUrl: authUrl.toString(),
-      stateCookieValue: signOAuthStatePayload(payload),
-    };
-  }
-
-  const vkClientId = process.env.VK_CLIENT_ID?.trim();
-  if (!vkClientId) {
+  const clientId = process.env.YANDEX_CLIENT_ID?.trim();
+  const clientSecret = process.env.YANDEX_CLIENT_SECRET?.trim();
+  if (!clientId || !clientSecret) {
     throw new Error(
-      "OAuth VK ID не настроен: укажите VK_CLIENT_ID (и VK_CLIENT_SECRET при необходимости) в .env.local."
+      "OAuth Яндекса не настроен: укажите YANDEX_CLIENT_ID и YANDEX_CLIENT_SECRET в .env."
     );
   }
 
-  const vkAuthUrl = new URL("https://id.vk.com/authorize");
-  vkAuthUrl.searchParams.set("response_type", "code");
-  vkAuthUrl.searchParams.set("client_id", vkClientId);
-  vkAuthUrl.searchParams.set("redirect_uri", redirectUri);
-  vkAuthUrl.searchParams.set("state", state);
-  vkAuthUrl.searchParams.set("code_challenge", codeChallenge);
-  vkAuthUrl.searchParams.set("code_challenge_method", "S256");
-  vkAuthUrl.searchParams.set("scope", "email");
+  const authUrl = new URL("https://oauth.yandex.ru/authorize");
+  authUrl.searchParams.set("response_type", "code");
+  authUrl.searchParams.set("client_id", clientId);
+  authUrl.searchParams.set("redirect_uri", redirectUri);
+  authUrl.searchParams.set("state", state);
+  authUrl.searchParams.set("scope", "login:email login:info login:avatar");
 
   return {
-    authorizationUrl: vkAuthUrl.toString(),
+    authorizationUrl: authUrl.toString(),
     stateCookieValue: signOAuthStatePayload(payload),
   };
 }
@@ -173,150 +142,72 @@ export async function exchangeOAuthCodeForProfile(params: {
   code: string;
   statePayload: OAuthStatePayload;
   request: Request;
-  deviceId?: string | null;
 }): Promise<OAuthUserProfile> {
-  const { provider, code, statePayload, request, deviceId } = params;
+  const { provider, code, request } = params;
   const redirectUri = getOAuthRedirectUri(provider, request);
 
-  if (provider === "yandex") {
-    const clientId = process.env.YANDEX_CLIENT_ID?.trim() || "";
-    const clientSecret = process.env.YANDEX_CLIENT_SECRET?.trim() || "";
+  const clientId = process.env.YANDEX_CLIENT_ID?.trim() || "";
+  const clientSecret = process.env.YANDEX_CLIENT_SECRET?.trim() || "";
 
-    const tokenBody = new URLSearchParams({
-      grant_type: "authorization_code",
-      code,
-      client_id: clientId,
-      client_secret: clientSecret,
-      redirect_uri: redirectUri,
-    });
-
-    const tokenResp = await fetch("https://oauth.yandex.ru/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: tokenBody.toString(),
-    });
-    const tokenJson = (await tokenResp.json()) as {
-      access_token?: string;
-      error_description?: string;
-      error?: string;
-    };
-
-    if (!tokenResp.ok || !tokenJson.access_token) {
-      throw new Error(
-        tokenJson.error_description || tokenJson.error || "Не удалось получить токен Яндекса."
-      );
-    }
-
-    const userResp = await fetch("https://login.yandex.ru/info?format=json", {
-      headers: {
-        Authorization: `OAuth ${tokenJson.access_token}`,
-      },
-    });
-    const userJson = (await userResp.json()) as {
-      id?: string;
-      default_email?: string;
-      emails?: string[];
-      display_name?: string;
-      real_name?: string;
-      login?: string;
-      default_avatar_id?: string;
-      is_avatar_empty?: boolean;
-    };
-
-    if (!userResp.ok || !userJson.id) {
-      throw new Error("Не удалось загрузить профиль пользователя Яндекса.");
-    }
-
-    const email = userJson.default_email || userJson.emails?.[0] || null;
-    const name =
-      userJson.display_name || userJson.real_name || userJson.login || "Пользователь Яндекс";
-    const avatarUrl =
-      userJson.default_avatar_id && !userJson.is_avatar_empty
-        ? `https://avatars.yandex.net/get-yapic/${userJson.default_avatar_id}/islands-200`
-        : undefined;
-
-    return {
-      provider: "yandex",
-      providerUserId: String(userJson.id),
-      email: email ? email.trim().toLowerCase() : null,
-      emailVerified: Boolean(email),
-      name,
-      avatarUrl,
-    };
-  }
-
-  // VK ID OAuth 2.1 (PKCE)
-  const vkClientId = process.env.VK_CLIENT_ID?.trim() || "";
-  const vkClientSecret = process.env.VK_CLIENT_SECRET?.trim();
-
-  const tokenParams = new URLSearchParams({
+  const tokenBody = new URLSearchParams({
     grant_type: "authorization_code",
     code,
-    code_verifier: statePayload.codeVerifier,
-    client_id: vkClientId,
+    client_id: clientId,
+    client_secret: clientSecret,
     redirect_uri: redirectUri,
-    state: statePayload.state,
   });
-  if (deviceId) {
-    tokenParams.set("device_id", deviceId);
-  }
-  if (vkClientSecret) {
-    tokenParams.set("client_secret", vkClientSecret);
-  }
 
-  const vkTokenResp = await fetch("https://id.vk.com/oauth2/auth", {
+  const tokenResp = await fetch("https://oauth.yandex.ru/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: tokenParams.toString(),
+    body: tokenBody.toString(),
   });
-  const vkTokenJson = (await vkTokenResp.json()) as {
+  const tokenJson = (await tokenResp.json()) as {
     access_token?: string;
-    user_id?: number | string;
     error_description?: string;
     error?: string;
   };
 
-  if (!vkTokenResp.ok || !vkTokenJson.access_token) {
+  if (!tokenResp.ok || !tokenJson.access_token) {
     throw new Error(
-      vkTokenJson.error_description || vkTokenJson.error || "Не удалось получить токен VK ID."
+      tokenJson.error_description || tokenJson.error || "Не удалось получить токен Яндекса."
     );
   }
 
-  const infoParams = new URLSearchParams({
-    client_id: vkClientId,
-    access_token: vkTokenJson.access_token,
+  const userResp = await fetch("https://login.yandex.ru/info?format=json", {
+    headers: {
+      Authorization: `OAuth ${tokenJson.access_token}`,
+    },
   });
-
-  const vkUserResp = await fetch("https://id.vk.com/oauth2/user_info", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: infoParams.toString(),
-  });
-  const vkUserJson = (await vkUserResp.json()) as {
-    user?: {
-      user_id?: string | number;
-      first_name?: string;
-      last_name?: string;
-      email?: string;
-      avatar?: string;
-    };
+  const userJson = (await userResp.json()) as {
+    id?: string;
+    default_email?: string;
+    emails?: string[];
+    display_name?: string;
+    real_name?: string;
+    login?: string;
+    default_avatar_id?: string;
+    is_avatar_empty?: boolean;
   };
 
-  const vkUser = vkUserJson.user;
-  const userId = vkUser?.user_id ?? vkTokenJson.user_id;
-  if (!vkUserResp.ok || !userId) {
-    throw new Error("Не удалось загрузить профиль пользователя VK ID.");
+  if (!userResp.ok || !userJson.id) {
+    throw new Error("Не удалось загрузить профиль пользователя Яндекса.");
   }
 
-  const fullName = [vkUser?.first_name, vkUser?.last_name].filter(Boolean).join(" ").trim();
-  const email = vkUser?.email ? vkUser.email.trim().toLowerCase() : null;
+  const email = userJson.default_email || userJson.emails?.[0] || null;
+  const name =
+    userJson.display_name || userJson.real_name || userJson.login || "Пользователь Яндекс";
+  const avatarUrl =
+    userJson.default_avatar_id && !userJson.is_avatar_empty
+      ? `https://avatars.yandex.net/get-yapic/${userJson.default_avatar_id}/islands-200`
+      : undefined;
 
   return {
-    provider: "vk",
-    providerUserId: String(userId),
-    email,
+    provider: "yandex",
+    providerUserId: String(userJson.id),
+    email: email ? email.trim().toLowerCase() : null,
     emailVerified: Boolean(email),
-    name: fullName || "Пользователь VK",
-    avatarUrl: vkUser?.avatar || undefined,
+    name,
+    avatarUrl,
   };
 }

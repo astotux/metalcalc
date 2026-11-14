@@ -1,4 +1,4 @@
-export type AuthProviderType = "email" | "yandex" | "vk";
+export type AuthProviderType = "email" | "yandex";
 
 export interface AuthUser {
   id: string;
@@ -27,5 +27,4 @@ export interface PasswordStrengthResult {
 
 export interface OAuthProvidersStatus {
   yandex: boolean;
-  vk: boolean;
 }

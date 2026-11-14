@@ -49,7 +49,6 @@ export async function GET(
 
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
-  const deviceId = url.searchParams.get("device_id");
 
   if (!code || !state) {
     return redirectWithOAuthError(origin, "Провайдер не передал код авторизации.");
@@ -71,7 +70,6 @@ export async function GET(
       code,
       statePayload,
       request,
-      deviceId,
     });
 
     const user = upsertOAuthUser(profile);
