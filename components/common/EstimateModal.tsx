@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import {
   AlertCircle,
   Check,
@@ -27,7 +28,7 @@ export function EstimateModal({ open, onClose }: EstimateModalProps) {
   const [exportingFormat, setExportingFormat] = useState<"pdf" | "excel" | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
   const estimate = calculateProjectEstimate(
     project.elements,
@@ -90,7 +91,7 @@ export function EstimateModal({ open, onClose }: EstimateModalProps) {
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3 sm:p-4 backdrop-blur-xs">
       <div className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-[var(--mc-border-strong)] bg-[var(--mc-bg-panel)] shadow-2xl">
         <div className="flex items-center justify-between border-b border-[var(--mc-border)] px-4 py-3">
@@ -285,6 +286,7 @@ export function EstimateModal({ open, onClose }: EstimateModalProps) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

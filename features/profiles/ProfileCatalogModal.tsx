@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, Pencil, Plus, RefreshCw, Search, Trash2, X } from "lucide-react";
@@ -34,13 +35,14 @@ export function ProfileCatalogModal({
   initialEditProfileId = null,
   onClose,
 }: ProfileCatalogModalProps) {
-  if (!open) return null;
-  return (
+  if (!open || typeof document === "undefined") return null;
+  return createPortal(
     <ProfileCatalogDialogContent
       key={initialEditProfileId ?? "new"}
       initialEditProfileId={initialEditProfileId}
       onClose={onClose}
-    />
+    />,
+    document.body
   );
 }
 

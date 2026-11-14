@@ -36,10 +36,10 @@ export function MetalCalcEditor() {
         )}
 
         <div
-          className={`absolute inset-y-0 left-0 z-30 flex w-[min(19rem,86vw)] shrink-0 flex-col border-r border-[var(--mc-border)] bg-[var(--mc-bg-panel)] shadow-2xl transition-transform duration-200 lg:static lg:z-auto lg:w-64 lg:translate-x-0 lg:shadow-none lg:transition-none xl:w-72 ${
+          className={`max-lg:absolute max-lg:inset-y-0 max-lg:left-0 max-lg:z-30 max-lg:w-[min(19rem,86vw)] max-lg:shadow-2xl max-lg:transition-transform max-lg:duration-200 shrink-0 flex-col border-r border-[var(--mc-border)] bg-[var(--mc-bg-panel)] lg:w-64 xl:w-72 ${
             leftDrawerOpen
-              ? "translate-x-0"
-              : "-translate-x-full pointer-events-none lg:pointer-events-auto"
+              ? "flex max-lg:translate-x-0"
+              : "flex max-lg:-translate-x-full max-lg:pointer-events-none"
           } ${leftPanelOpen ? "lg:flex" : "lg:hidden"}`}
         >
           <div className="flex items-center justify-between border-b border-[var(--mc-border)] px-3 py-2 lg:hidden">
@@ -63,10 +63,10 @@ export function MetalCalcEditor() {
         <WorkspaceCanvas />
 
         <div
-          className={`absolute inset-y-0 right-0 z-30 flex w-[min(21rem,88vw)] shrink-0 flex-col border-l border-[var(--mc-border)] bg-[var(--mc-bg-panel)] shadow-2xl transition-transform duration-200 lg:static lg:z-auto lg:w-72 lg:translate-x-0 lg:shadow-none lg:transition-none xl:w-80 ${
+          className={`max-lg:absolute max-lg:inset-y-0 max-lg:right-0 max-lg:z-30 max-lg:w-[min(21rem,88vw)] max-lg:shadow-2xl max-lg:transition-transform max-lg:duration-200 shrink-0 flex-col border-l border-[var(--mc-border)] bg-[var(--mc-bg-panel)] lg:w-72 xl:w-80 ${
             rightDrawerOpen
-              ? "translate-x-0"
-              : "translate-x-full pointer-events-none lg:pointer-events-auto"
+              ? "flex max-lg:translate-x-0"
+              : "flex max-lg:translate-x-full max-lg:pointer-events-none"
           } ${rightPanelOpen ? "lg:flex" : "lg:hidden"}`}
         >
           <div className="flex items-center justify-between border-b border-[var(--mc-border)] px-3 py-2 lg:hidden">
