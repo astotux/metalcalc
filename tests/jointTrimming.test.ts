@@ -261,4 +261,132 @@ describe("Сращивание и подрезка угловых стыков (
     const sortedXy = sortElementsByPlaneDepth([thinDiag, frontBeam], profMap2, trims, "xy");
     expect(sortedXy.map((e) => e.id)).toEqual(["diag", "front"]);
   });
+
+  it("сращивает пологий тупой угол (~165°) без клиновидного разрыва даже при joint.type='butt' (Авто)", () => {
+    const elements: ConstructionElement[] = [
+      {
+        id: "leg",
+        type: "beam",
+        start: { x: 1200, y: 0, z: 0 },
+        end: { x: 1200, y: 600, z: 0 },
+        profileId: "p40",
+      },
+      {
+        id: "rafter",
+        type: "beam",
+        start: { x: 1200, y: 0, z: 0 },
+        end: { x: 1045, y: -580, z: 0 }, // ~165° к вертикали
+        profileId: "p40",
+      },
+    ];
+    const autoJoint: JointConnection = {
+      id: "j-obtuse",
+      type: "butt", // detectJoints ставит 'butt' для углов != 90/45
+      elementIds: ["leg", "rafter"],
+      position: { x: 1200, y: 0, z: 0 },
+      weldLengthMm: null,
+    };
+
+    const trims = computeElementTrims(elements, [prof40], [autoJoint]);
+    const legTrim = trims.get("leg")!;
+    const rafterTrim = trims.get("rafter")!;
+
+    // Не должно быть резкого косого выреза со slope ≈ -3.5 и смещением ~80 мм
+    expect(Math.abs(legTrim.start.d0Mm)).toBeLessThan(5);
+    expect(Math.abs(legTrim.start.slopeX)).toBeLessThan(0.35);
+    expect(Math.abs(rafterTrim.start.slopeX)).toBeLessThan(0.35);
+
+    // Торцы двух труб в узле должны совпасть (внешние/внутренние углы у (1200, 0) сходятся)
+    const legStartCorners = getBeamOuterCorners3D(elements[0], prof40, legTrim).filter(
+      (c) => c.y < 100
+    );
+    const rafterStartCorners = getBeamOuterCorners3D(elements[1], prof40, rafterTrim).filter(
+      (c) => c.y > -100
+    );
+    for (const lc of legStartCorners) {
+      const minDist = Math.min(
+        ...rafterStartCorners.map((rc) => Math.hypot(lc.x - rc.x, lc.y - rc.y, lc.z - rc.z))
+      );
+      expect(minDist).toBeLessThan(0.5);
+    }
+  });
+
+  it("обрезает острый угол (~25°) заподлицо без торчащей за пределы узла острой «иглы»", () => {
+    const chord: ConstructionElement = {
+      id: "chord",
+      type: "beam",
+      start: { x: 0, y: 0, z: 0 },
+      end: { x: 1400, y: 0, z: 0 },
+      profileId: "p40",
+    };
+    const brace: ConstructionElement = {
+      id: "brace",
+      type: "beam",
+      start: { x: 0, y: 0, z: 0 },
+      end: { x: 1000, y: 466, z: 0 }, // ~25° к хорде
+      profileId: "p40",
+    };
+
+    const trims = computeElementTrims([chord, brace], [prof40]);
+    const chordCorners = getBeamOuterCorners3D(chord, prof40, trims.get("chord"));
+    const braceCorners = getBeamOuterCorners3D(brace, prof40, trims.get("brace"));
+
+    // Ни один угол ни одной балки не вытягивается в длинную иглу (-70..-90 мм): максимум ~5 мм под стык
+    const minX = Math.min(...chordCorners.map((c) => c.x), ...braceCorners.map((c) => c.x));
+    expect(minX).toBeGreaterThan(-10);
+
+    // И внешний угол хорды совпадает с углом диагонали без ступеньки
+    const chordBottomLeft = chordCorners.find((c) => c.x < 10 && c.y > 0)!;
+    const braceLeft = braceCorners.find((c) => c.x < 10 && Math.abs(c.y - 20) < 1)!;
+    expect(Math.hypot(chordBottomLeft.x - braceLeft.x, chordBottomLeft.y - braceLeft.y)).toBeLessThan(1.5);
+  });
+
+  it("подрезает 3-лучевой узел (рамная пара + третья диагональ) строго внутрь, не вытягивая диагональ наружу", () => {
+    const vBeam: ConstructionElement = {
+      id: "v",
+      type: "beam",
+      start: { x: 0, y: 0, z: 0 },
+      end: { x: 0, y: 600, z: 0 },
+      profileId: "p40",
+    };
+    const pBeam: ConstructionElement = {
+      id: "p",
+      type: "beam",
+      start: { x: 0, y: 0, z: 0 },
+      end: { x: 1150, y: -350, z: 0 },
+      profileId: "p40",
+    };
+    const diag: ConstructionElement = {
+      id: "d",
+      type: "beam",
+      start: { x: 0, y: 0, z: 0 },
+      end: { x: 900, y: -900, z: 0 },
+      profileId: "p40",
+    };
+
+    const trims = computeElementTrims([vBeam, pBeam, diag], [prof40]);
+    const diagTrim = trims.get("d")!;
+    // Начало диагонали в (0,0) должно укорачиваться внутрь балки (d0Mm >= 0), не удлиняться в минус
+    expect(diagTrim.start.d0Mm).toBeGreaterThanOrEqual(0);
+  });
+
+  it("подрезает Т-примыкание вблизи конца длинной балки (30 мм от края при длине 2500 мм)", () => {
+    const host: ConstructionElement = {
+      id: "host-long",
+      type: "beam",
+      start: { x: 0, y: 0, z: 0 },
+      end: { x: 2500, y: 0, z: 0 },
+      profileId: "p40",
+    };
+    const branch: ConstructionElement = {
+      id: "branch-near-end",
+      type: "beam",
+      start: { x: 30, y: 0, z: 0 },
+      end: { x: 30, y: 500, z: 0 },
+      profileId: "p40",
+    };
+
+    const trims = computeElementTrims([host, branch], [prof40]);
+    expect(trims.get("branch-near-end")?.start.d0Mm).toBeCloseTo(20, 3);
+  });
 });

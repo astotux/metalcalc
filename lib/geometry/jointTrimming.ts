@@ -125,6 +125,7 @@ function halfExtentAlong(
 
 /**
  * Вычисляет параметры подрезки торца балки плоскостью (planePoint, planeNormal).
+ * Возвращает `null`, если плоскость слишком пологая к оси балки и вызовет искажение.
  */
 function cutByPlane(
   anchor: Point3D,
@@ -133,24 +134,28 @@ function cutByPlane(
   hh: number,
   planePoint: Point3D,
   planeNormal: Point3D
-): EndCutSpec {
+): EndCutSpec | null {
   const n = normalize(planeNormal);
   const denom = dot(basis.zAxis, n);
-  if (Math.abs(denom) < 0.18) {
-    return ZERO_CUT;
+  if (Math.abs(denom) < 0.24) {
+    return null;
   }
 
-  let d0Mm = dot(sub(planePoint, anchor), n) / denom;
-  let slopeX = -dot(basis.xAxis, n) / denom;
-  let slopeY = -dot(basis.yAxis, n) / denom;
+  const d0Mm = dot(sub(planePoint, anchor), n) / denom;
+  const slopeX = -dot(basis.xAxis, n) / denom;
+  const slopeY = -dot(basis.yAxis, n) / denom;
 
-  // Защита от экстремального вытягивания иглы при сверхмалых углах
+  // Отбрасываем сверхпологие/искажающие резы целиком вместо независимого clamp,
+  // чтобы геометрия плоскости не «перекручивалась» между стыкуемыми балками
   const maxSlope = 3.5;
-  slopeX = Math.max(-maxSlope, Math.min(maxSlope, slopeX));
-  slopeY = Math.max(-maxSlope, Math.min(maxSlope, slopeY));
+  if (Math.hypot(slopeX, slopeY) > maxSlope) {
+    return null;
+  }
 
-  const maxOffset = Math.max(hw, hh) * 4;
-  d0Mm = Math.max(-maxOffset, Math.min(maxOffset, d0Mm));
+  const maxOffset = Math.max(hw, hh) * 6;
+  if (Math.abs(d0Mm) > maxOffset) {
+    return null;
+  }
 
   return { d0Mm, slopeX, slopeY };
 }
@@ -225,14 +230,22 @@ function findMatchingJoint(
   );
 }
 
-/** Вычисляет плоскость косого реза ("на ус" / miter) для двух труб в одной точке. */
+/**
+ * Смещение подрезки внутрь балки от её узлового конца (> 0 — укорачивает, < 0 — удлиняет).
+ */
+function inwardCutShiftMm(ref: EndpointRef, cut: EndCutSpec): number {
+  return dot(scale(ref.basis.zAxis, cut.d0Mm), ref.dirOut);
+}
+
+/** Вычисляет плоскость косого реза ("на ус" / miter) для двух труб (угол ~50°..176°). */
 function computeMiterPlane(
   pos: Point3D,
   a: EndpointRef,
   b: EndpointRef
 ): { point: Point3D; normal: Point3D } | null {
   const cosTheta = dot(a.dirOut, b.dirOut);
-  if (Math.abs(cosTheta) > 0.96) return null; // угол < ~16° или ~180° — прямая линия
+  // Почти прямая линия (> ~176°) или острый угол (< ~50°) обрабатываются отдельно
+  if (cosTheta < -0.998 || cosTheta > 0.64) return null;
 
   const planeNormal = normalize(cross(a.dirOut, b.dirOut));
   // Единичный вектор в плоскости угла, перпендикулярный A и смотрящий в сторону B
@@ -246,11 +259,19 @@ function computeMiterPlane(
   const halfA = halfExtentAlong(a.basis, a.hw, a.hh, sA);
   const halfB = halfExtentAlong(b.basis, b.hw, b.hh, sB);
 
+  // На пологих тупых углах (> 160°) используем устойчивую биссектрису без деления на малый sin(theta)
+  if (cosTheta < -0.94 || Math.abs(halfA - halfB) <= 0.5) {
+    if (cosTheta < -0.94) {
+      return { point: pos, normal: normalize(sub(a.dirOut, b.dirOut)) };
+    }
+  }
+
   const sinTheta = dot(a.dirOut, sB);
-  if (Math.abs(sinTheta) < 0.22) return null;
+  if (Math.abs(sinTheta) < 0.25) {
+    return { point: pos, normal: normalize(sub(a.dirOut, b.dirOut)) };
+  }
 
   // Пересечение внутренних кромок A (+halfA*sA) и B (+halfB*sB):
-  // P_inner = P + tA_in * uA + halfA * sA
   const sAdotSB = dot(sA, sB);
   const tAIn = (halfB - halfA * sAdotSB) / sinTheta;
   const pInner = add(pos, add(scale(a.dirOut, tAIn), scale(sA, halfA)));
@@ -352,20 +373,154 @@ export function computeElementTrims(
       continue;
     }
 
+    // В режиме "Авто" (в т.ч. когда detectJoints пометил нестандартный угол как type="butt")
+    // угловые стыки сращиваются "на ус"/по геометрии угла; режим "butt" (встык) применяется только
+    // при явном выборе пользователем `trimMode === "butt"`.
     const mode =
-      matchedJoint?.trimMode && matchedJoint.trimMode !== "auto"
-        ? matchedJoint.trimMode
-        : matchedJoint?.type === "butt"
-          ? "butt"
-          : "miter";
+      matchedJoint?.trimMode === "butt" ? "butt" : "miter";
+
+    const applyButtPair = (primary: EndpointRef, secondary: EndpointRef) => {
+      const dirDot = dot(primary.dirOut, secondary.dirOut);
+
+      // Пологий/прямой тупой стык (> ~136°): продольная стенка primary почти параллельна secondary,
+      // поэтому вместо выреза «в стенку» с огромным скосом используем чистый косой срез или торец-к-торцу.
+      if (dirDot < -0.72) {
+        const miter = computeMiterPlane(pos, primary, secondary);
+        if (miter) {
+          const cutP = cutByPlane(primary.pos, primary.basis, primary.hw, primary.hh, miter.point, miter.normal);
+          const cutS = cutByPlane(secondary.pos, secondary.basis, secondary.hw, secondary.hh, miter.point, miter.normal);
+          if (cutP && cutS) {
+            setEndCut(primary, cutP);
+            setEndCut(secondary, cutS);
+          }
+        }
+        return;
+      }
+
+      // Для острого угла (16°..44°) не выдвигаем primary вперёд сквозь V-угол,
+      // а аккуратно подрезаем примыкающую балку к боковой стенке primary.
+      if (dirDot <= 0.72) {
+        const extMm = halfExtentAlong(secondary.basis, secondary.hw, secondary.hh, primary.dirOut);
+        const primaryPlanePoint = sub(pos, scale(primary.dirOut, extMm));
+        const cutP = cutByPlane(
+          primary.pos,
+          primary.basis,
+          primary.hw,
+          primary.hh,
+          primaryPlanePoint,
+          primary.dirOut
+        );
+        if (cutP) setEndCut(primary, cutP);
+      }
+
+      const wallPlane = getHostBoxFacePlane(
+        pos,
+        primary.basis,
+        primary.hw,
+        primary.hh,
+        secondary.dirOut
+      );
+      const cutS = cutByPlane(
+        secondary.pos,
+        secondary.basis,
+        secondary.hw,
+        secondary.hh,
+        wallPlane.point,
+        wallPlane.normal
+      );
+      if (cutS && inwardCutShiftMm(secondary, cutS) >= -1) {
+        setEndCut(secondary, cutS);
+      }
+    };
 
     if (cluster.length === 2) {
       const [a, b] = cluster;
       if (mode === "miter") {
-        const plane = computeMiterPlane(pos, a, b);
-        if (plane) {
-          setEndCut(a, cutByPlane(a.pos, a.basis, a.hw, a.hh, plane.point, plane.normal));
-          setEndCut(b, cutByPlane(b.pos, b.basis, b.hw, b.hh, plane.point, plane.normal));
+        const cosTheta = dot(a.dirOut, b.dirOut);
+        if (cosTheta > 0.64) {
+          // Острый угол (< ~50°): вместо длинной «иглы» от классического уса
+          // оставляем несущую балку с чистым торцом, а вторую подрезаем заподлицо к её стенке.
+          if (cosTheta <= 0.96) {
+            const areaA = a.hw * a.hh;
+            const areaB = b.hw * b.hh;
+            const chord =
+              matchedJoint?.primaryElementId === a.element.id
+                ? a
+                : matchedJoint?.primaryElementId === b.element.id
+                  ? b
+                  : Math.abs(areaA - areaB) > 50
+                    ? areaA > areaB
+                      ? a
+                      : b
+                    : a.basis.lengthMm >= b.basis.lengthMm
+                      ? a
+                      : b;
+            const branch = chord === a ? b : a;
+            const wall = getHostBoxFacePlane(
+              pos,
+              chord.basis,
+              chord.hw,
+              chord.hh,
+              branch.dirOut
+            );
+            const cutBranch = cutByPlane(
+              branch.pos,
+              branch.basis,
+              branch.hw,
+              branch.hh,
+              wall.point,
+              wall.normal
+            );
+            if (cutBranch && inwardCutShiftMm(branch, cutBranch) >= -1) {
+              setEndCut(branch, cutBranch);
+
+              // Точно проверяем по 4 углам скоса branch, насколько внешняя кромка выступает за pos против chord.dirOut,
+              // и слегка вытягиваем торец chord на эту величину (обычно 2..8 мм), чтобы стык сходился без ступеньки.
+              let overhangMm = 0;
+              const corners2D: Array<[number, number]> = [
+                [-branch.hw, -branch.hh],
+                [branch.hw, -branch.hh],
+                [branch.hw, branch.hh],
+                [-branch.hw, branch.hh],
+              ];
+              for (const [lx, ly] of corners2D) {
+                const radial = add(
+                  scale(branch.basis.xAxis, lx),
+                  scale(branch.basis.yAxis, ly)
+                );
+                const dz =
+                  cutBranch.d0Mm + cutBranch.slopeX * lx + cutBranch.slopeY * ly;
+                const cornerPt = add(
+                  add(branch.pos, radial),
+                  scale(branch.basis.zAxis, dz)
+                );
+                overhangMm = Math.max(overhangMm, dot(sub(pos, cornerPt), chord.dirOut));
+              }
+
+              const maxExtend = Math.max(chord.hw, chord.hh) * 1.25;
+              if (overhangMm > 0.2 && overhangMm <= maxExtend) {
+                const extCut = cutByPlane(
+                  chord.pos,
+                  chord.basis,
+                  chord.hw,
+                  chord.hh,
+                  sub(pos, scale(chord.dirOut, overhangMm)),
+                  chord.dirOut
+                );
+                if (extCut) setEndCut(chord, extCut);
+              }
+            }
+          }
+        } else {
+          const plane = computeMiterPlane(pos, a, b);
+          if (plane) {
+            const cutA = cutByPlane(a.pos, a.basis, a.hw, a.hh, plane.point, plane.normal);
+            const cutB = cutByPlane(b.pos, b.basis, b.hw, b.hh, plane.point, plane.normal);
+            if (cutA && cutB) {
+              setEndCut(a, cutA);
+              setEndCut(b, cutB);
+            }
+          }
         }
       } else {
         // Встык (butt): одна сквозная (primary), вторая упирается в её боковую стенку
@@ -378,39 +533,7 @@ export function computeElementTrims(
                 ? a
                 : b;
         const secondary = primary === a ? b : a;
-
-        const extMm = halfExtentAlong(secondary.basis, secondary.hw, secondary.hh, primary.dirOut);
-        const primaryPlanePoint = sub(pos, scale(primary.dirOut, extMm));
-        setEndCut(
-          primary,
-          cutByPlane(
-            primary.pos,
-            primary.basis,
-            primary.hw,
-            primary.hh,
-            primaryPlanePoint,
-            primary.dirOut
-          )
-        );
-
-        const wallPlane = getHostBoxFacePlane(
-          pos,
-          primary.basis,
-          primary.hw,
-          primary.hh,
-          secondary.dirOut
-        );
-        setEndCut(
-          secondary,
-          cutByPlane(
-            secondary.pos,
-            secondary.basis,
-            secondary.hw,
-            secondary.hh,
-            wallPlane.point,
-            wallPlane.normal
-          )
-        );
+        applyButtPair(primary, secondary);
       }
       continue;
     }
@@ -425,6 +548,9 @@ export function computeElementTrims(
       for (let q = p + 1; q < cluster.length; q += 1) {
         const u = cluster[p].dirOut;
         const v = cluster[q].dirOut;
+        const cosUV = dot(u, v);
+        // Предпочитаем пары с хорошим углом (от ~50° до ~160°), не создающие игл на 3D-углах
+        if (cosUV > 0.64) continue;
         const crossMag = len3(cross(u, v));
         if (crossMag < 0.25) continue;
         // Небольшое предпочтение горизонтальным (Z ≈ 0) рамным парам
@@ -438,72 +564,63 @@ export function computeElementTrims(
       }
     }
 
+    const pickInwardWallCut = (
+      other: EndpointRef,
+      hosts: EndpointRef[]
+    ): EndCutSpec | null => {
+      let bestCut: EndCutSpec | null = null;
+      let bestInward = -Infinity;
+      for (const host of hosts) {
+        const wall = getHostBoxFacePlane(
+          pos,
+          host.basis,
+          host.hw,
+          host.hh,
+          other.dirOut
+        );
+        const candidate = cutByPlane(
+          other.pos,
+          other.basis,
+          other.hw,
+          other.hh,
+          wall.point,
+          wall.normal
+        );
+        if (!candidate) continue;
+        const inward = inwardCutShiftMm(other, candidate);
+        // Игнорируем «вытягивающие» балку наружу резы
+        if (inward < -1) continue;
+        if (inward > bestInward) {
+          bestInward = inward;
+          bestCut = candidate;
+        }
+      }
+      return bestCut;
+    };
+
     if (mode === "miter" && bestScore > 0) {
       const plane = computeMiterPlane(pos, pairA, pairB);
       if (plane) {
-        setEndCut(
-          pairA,
-          cutByPlane(pairA.pos, pairA.basis, pairA.hw, pairA.hh, plane.point, plane.normal)
-        );
-        setEndCut(
-          pairB,
-          cutByPlane(pairB.pos, pairB.basis, pairB.hw, pairB.hh, plane.point, plane.normal)
-        );
+        const cutA = cutByPlane(pairA.pos, pairA.basis, pairA.hw, pairA.hh, plane.point, plane.normal);
+        const cutB = cutByPlane(pairB.pos, pairB.basis, pairB.hw, pairB.hh, plane.point, plane.normal);
+        if (cutA && cutB) {
+          setEndCut(pairA, cutA);
+          setEndCut(pairB, cutB);
+        }
       }
 
       for (const other of cluster) {
         if (other === pairA || other === pairB) continue;
-        const wallA = getHostBoxFacePlane(
-          pos,
-          pairA.basis,
-          pairA.hw,
-          pairA.hh,
-          other.dirOut
-        );
-        const wallB = getHostBoxFacePlane(
-          pos,
-          pairB.basis,
-          pairB.hw,
-          pairB.hh,
-          other.dirOut
-        );
-        // Выбираем грань, которая подрезает дальше вдоль other.dirOut
-        const cutA = cutByPlane(
-          other.pos,
-          other.basis,
-          other.hw,
-          other.hh,
-          wallA.point,
-          wallA.normal
-        );
-        const cutB = cutByPlane(
-          other.pos,
-          other.basis,
-          other.hw,
-          other.hh,
-          wallB.point,
-          wallB.normal
-        );
-        const absCut =
-          Math.abs(cutA.d0Mm) >= Math.abs(cutB.d0Mm) ? cutA : cutB;
-        setEndCut(other, absCut);
+        const cut = pickInwardWallCut(other, [pairA, pairB]);
+        if (cut) setEndCut(other, cut);
       }
     } else {
       const primary =
         cluster.find((c) => c.element.id === matchedJoint?.primaryElementId) ?? cluster[0];
       for (const other of cluster) {
         if (other === primary) continue;
-        const wall = getHostBoxFacePlane(
-          pos,
-          primary.basis,
-          primary.hw,
-          primary.hh,
-          other.dirOut
-        );
-        setEndCut(
-          other,
-          cutByPlane(other.pos, other.basis, other.hw, other.hh, wall.point, wall.normal)
-        );
+        const cut = pickInwardWallCut(other, [primary]);
+        if (cut) setEndCut(other, cut);
       }
     }
   }
@@ -522,7 +639,9 @@ export function computeElementTrims(
       const delta = sub(host.end, host.start);
       const lenSq = dot(delta, delta);
       const t = dot(sub(ref.pos, host.start), delta) / lenSq;
-      if (t <= 0.02 || t >= 0.98) continue;
+      if (t <= 0 || t >= 1) continue;
+      const distFromEnd = Math.min(t, 1 - t) * hostBasis.lengthMm;
+      if (distFromEnd < 2) continue;
 
       const proj = add(host.start, scale(delta, t));
       const d = dist3(ref.pos, proj);
@@ -541,10 +660,10 @@ export function computeElementTrims(
     const hostBasis = basisMap.get(bestHost.id)!;
     const { hw: hostHw, hh: hostHh } = getProfileDims(profileMap.get(bestHost.profileId));
     const wall = getHostBoxFacePlane(bestHit, hostBasis, hostHw, hostHh, ref.dirOut);
-    setEndCut(
-      ref,
-      cutByPlane(ref.pos, ref.basis, ref.hw, ref.hh, wall.point, wall.normal)
-    );
+    const tCut = cutByPlane(ref.pos, ref.basis, ref.hw, ref.hh, wall.point, wall.normal);
+    if (tCut && inwardCutShiftMm(ref, tCut) >= -1) {
+      setEndCut(ref, tCut);
+    }
   }
 
   // 3. Ограничение длины подрезки для каждой балки
