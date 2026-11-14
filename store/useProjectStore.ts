@@ -6,12 +6,17 @@ import {
   apiDeleteProject,
   apiDuplicateProject,
   apiGetProject,
+  apiListProfileCatalog,
   apiListProjects,
   apiRenameProject,
   apiSaveProfileCatalog,
   apiSaveProject,
 } from "@/features/projects/apiClient";
-import { loadSavedProfileCatalog, saveProfileCatalog } from "@/features/profiles/storage";
+import {
+  clearSavedProfileCatalog,
+  loadSavedProfileCatalog,
+  saveProfileCatalog,
+} from "@/features/profiles/storage";
 import {
   detectProjectJoints,
   estimateJointPerimeterWeldMm,
@@ -123,6 +128,7 @@ interface ProjectStoreState {
   deleteSavedProject: (id: string) => Promise<boolean>;
   fetchSavedProjects: () => Promise<DbProjectSummary[]>;
   hydrateFromStorage: () => Promise<void>;
+  resetForUserSession: () => void;
 }
 
 function cloneSnapshot(project: MetalCalcProject): HistorySnapshot {
@@ -176,6 +182,15 @@ function readActiveProjectId(): string | null {
     return window.localStorage.getItem(STORAGE_KEY_ACTIVE_ID);
   } catch {
     return null;
+  }
+}
+
+function clearActiveProjectId(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY_ACTIVE_ID);
+  } catch {
+    // ignore
   }
 }
 
@@ -986,6 +1001,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
 
   loadExampleProject: () => {
     const example = createExampleProject();
+    example.id = `proj-example-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     set({
       project: example,
       activeProfileId: example.profiles[2]?.id ?? example.profiles[0]?.id ?? "",
@@ -1182,7 +1198,14 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     if (typeof window === "undefined") return;
     set({ projectsLoading: true });
     try {
-      const summaries = await apiListProjects();
+      const [summaries, userCatalog] = await Promise.all([
+        apiListProjects(),
+        apiListProfileCatalog().catch(() => null),
+      ]);
+      if (userCatalog && userCatalog.length > 0) {
+        saveProfileCatalog(userCatalog);
+      }
+
       const currentState = get();
 
       if (currentState.hasHydrated || currentState.saveStatus === "unsaved") {
@@ -1220,5 +1243,25 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         error instanceof Error ? error.message : "Не удалось загрузить проекты из SQLite.";
       set({ projectsLoading: false, lastError: message });
     }
+  },
+
+  resetForUserSession: () => {
+    clearActiveProjectId();
+    clearSavedProfileCatalog();
+    const fresh = createEmptyProject("Новый проект");
+    set({
+      project: fresh,
+      savedProjects: [],
+      projectsLoading: false,
+      hasHydrated: false,
+      activeTool: "select",
+      activeProfileId: fresh.profiles[0]?.id ?? "",
+      selectedElementIds: [],
+      selectedJointId: null,
+      saveStatus: "saved",
+      lastError: null,
+      historyPast: [],
+      historyFuture: [],
+    });
   },
 }));

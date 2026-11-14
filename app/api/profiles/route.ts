@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getSessionUserFromRequest } from "@/lib/auth/session";
 import {
   listCatalogProfilesFromDb,
   saveCatalogProfilesToDb,
@@ -13,9 +14,14 @@ const catalogPayloadSchema = z.object({
   profiles: z.array(materialProfileSchema).min(1),
 });
 
-export async function GET() {
+export async function GET(request?: Request) {
   try {
-    const profiles = listCatalogProfilesFromDb();
+    const user = request ? getSessionUserFromRequest(request) : null;
+    if (!user) {
+      return NextResponse.json({ error: "Требуется авторизация." }, { status: 401 });
+    }
+
+    const profiles = listCatalogProfilesFromDb(user.id);
     return NextResponse.json({ profiles });
   } catch (error) {
     console.error("SQLite GET /api/profiles error:", error);
@@ -28,6 +34,11 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
+    const user = getSessionUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: "Требуется авторизация." }, { status: 401 });
+    }
+
     const body = await request.json();
     const parsed = catalogPayloadSchema.safeParse(body);
     if (!parsed.success) {
@@ -36,7 +47,7 @@ export async function PUT(request: Request) {
         { status: 400 }
       );
     }
-    saveCatalogProfilesToDb(parsed.data.profiles);
+    saveCatalogProfilesToDb(parsed.data.profiles, user.id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("SQLite PUT /api/profiles error:", error);

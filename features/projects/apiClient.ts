@@ -1,7 +1,18 @@
 import type { DbProjectSummary } from "@/lib/db/projectsRepository";
 import type { MaterialProfile, MetalCalcProject } from "@/types";
 
+function redirectOnUnauthorized(response: Response): void {
+  if (response.status === 401 && typeof window !== "undefined") {
+    const pathname = window.location.pathname;
+    if (!pathname.startsWith("/login") && !pathname.startsWith("/register")) {
+      const next = `${pathname}${window.location.search}`;
+      window.location.replace(`/login?next=${encodeURIComponent(next || "/")}`);
+    }
+  }
+}
+
 async function parseErrorMessage(response: Response, fallback: string): Promise<string> {
+  redirectOnUnauthorized(response);
   try {
     const data = (await response.json()) as { error?: string; details?: string };
     if (data.details) return `${data.error ?? fallback}: ${data.details}`;
@@ -80,6 +91,15 @@ export async function apiDeleteProject(id: string): Promise<void> {
   if (!res.ok) {
     throw new Error(await parseErrorMessage(res, "Не удалось удалить проект"));
   }
+}
+
+export async function apiListProfileCatalog(): Promise<MaterialProfile[]> {
+  const res = await fetch("/api/profiles", { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res, "Не удалось загрузить каталог профилей"));
+  }
+  const data = (await res.json()) as { profiles: MaterialProfile[] };
+  return data.profiles;
 }
 
 export async function apiSaveProfileCatalog(profiles: MaterialProfile[]): Promise<void> {

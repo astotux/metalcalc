@@ -21,6 +21,8 @@ html[data-theme="dark"] {
   --mc-brand-border: rgba(159, 70, 54, 0.62);
   --mc-brand-inline: #e29a8a;
   --mc-danger-text: #fda4af;
+  --mc-danger-soft: rgba(244, 63, 94, 0.14);
+  --mc-danger-border: rgba(251, 113, 133, 0.45);
   --mc-success-text: #86efac;
   --mc-warning-text: #fcd34d;
 }
@@ -45,6 +47,8 @@ html[data-theme="light"] {
   --mc-brand-border: rgba(159, 70, 54, 0.45);
   --mc-brand-inline: #6c2d2c;
   --mc-danger-text: #be123c;
+  --mc-danger-soft: rgba(225, 29, 72, 0.08);
+  --mc-danger-border: rgba(225, 29, 72, 0.35);
   --mc-success-text: #15803d;
   --mc-warning-text: #b45309;
 }

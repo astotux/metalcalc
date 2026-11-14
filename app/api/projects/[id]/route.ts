@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getSessionUserFromRequest } from "@/lib/auth/session";
 import {
   deleteProjectInDb,
   duplicateProjectInDb,
   getProjectFromDb,
+  ProjectForbiddenError,
   renameProjectInDb,
   saveProjectToDb,
 } from "@/lib/db/projectsRepository";
@@ -24,12 +26,17 @@ const patchSchema = z.discriminatedUnion("action", [
 ]);
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = getSessionUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: "Требуется авторизация." }, { status: 401 });
+    }
+
     const { id } = await context.params;
-    const project = getProjectFromDb(id);
+    const project = getProjectFromDb(id, user.id);
     if (!project) {
       return NextResponse.json({ error: "Проект не найден." }, { status: 404 });
     }
@@ -45,6 +52,11 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = getSessionUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: "Требуется авторизация." }, { status: 401 });
+    }
+
     const { id } = await context.params;
     const body = await request.json();
     const parsed = metalCalcProjectSchema.safeParse({ ...body, id });
@@ -57,9 +69,12 @@ export async function PUT(
         { status: 400 }
       );
     }
-    const saved = saveProjectToDb(parsed.data);
+    const saved = saveProjectToDb(parsed.data, user.id);
     return NextResponse.json({ project: saved });
   } catch (error) {
+    if (error instanceof ProjectForbiddenError) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     console.error("SQLite PUT /api/projects/[id] error:", error);
     return NextResponse.json({ error: "Ошибка обновления проекта." }, { status: 500 });
   }
@@ -70,6 +85,11 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = getSessionUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: "Требуется авторизация." }, { status: 401 });
+    }
+
     const { id } = await context.params;
     const body = await request.json();
     const parsed = patchSchema.safeParse(body);
@@ -81,31 +101,39 @@ export async function PATCH(
     }
 
     if (parsed.data.action === "rename") {
-      const renamed = renameProjectInDb(id, parsed.data.name);
+      const renamed = renameProjectInDb(id, parsed.data.name, user.id);
       if (!renamed) {
         return NextResponse.json({ error: "Проект не найден." }, { status: 404 });
       }
       return NextResponse.json({ project: renamed });
     }
 
-    const duplicated = duplicateProjectInDb(id, parsed.data.name);
+    const duplicated = duplicateProjectInDb(id, parsed.data.name, user.id);
     if (!duplicated) {
       return NextResponse.json({ error: "Проект не найден." }, { status: 404 });
     }
     return NextResponse.json({ project: duplicated }, { status: 201 });
   } catch (error) {
+    if (error instanceof ProjectForbiddenError) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     console.error("SQLite PATCH /api/projects/[id] error:", error);
     return NextResponse.json({ error: "Ошибка изменения проекта." }, { status: 500 });
   }
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = getSessionUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: "Требуется авторизация." }, { status: 401 });
+    }
+
     const { id } = await context.params;
-    const deleted = deleteProjectInDb(id);
+    const deleted = deleteProjectInDb(id, user.id);
     if (!deleted) {
       return NextResponse.json({ error: "Проект не найден." }, { status: 404 });
     }

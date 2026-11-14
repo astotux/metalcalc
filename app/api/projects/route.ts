@@ -1,13 +1,26 @@
 import { NextResponse } from "next/server";
-import { listProjectsFromDb, saveProjectToDb } from "@/lib/db/projectsRepository";
+import { getSessionUserFromRequest } from "@/lib/auth/session";
+import {
+  listProjectsFromDb,
+  ProjectForbiddenError,
+  saveProjectToDb,
+} from "@/lib/db/projectsRepository";
 import { metalCalcProjectSchema } from "@/lib/validation/schemas";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request?: Request) {
   try {
-    const projects = listProjectsFromDb();
+    const user = request ? getSessionUserFromRequest(request) : null;
+    if (!user) {
+      return NextResponse.json(
+        { error: "Требуется авторизация." },
+        { status: 401 }
+      );
+    }
+
+    const projects = listProjectsFromDb(user.id);
     return NextResponse.json({ projects });
   } catch (error) {
     console.error("SQLite GET /api/projects error:", error);
@@ -20,6 +33,14 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const user = getSessionUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Требуется авторизация." },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const parsed = metalCalcProjectSchema.safeParse(body);
 
@@ -33,9 +54,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const saved = saveProjectToDb(parsed.data);
+    const saved = saveProjectToDb(parsed.data, user.id);
     return NextResponse.json({ project: saved }, { status: 201 });
   } catch (error) {
+    if (error instanceof ProjectForbiddenError) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     console.error("SQLite POST /api/projects error:", error);
     return NextResponse.json(
       { error: "Ошибка сохранения проекта в SQLite." },

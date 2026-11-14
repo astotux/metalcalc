@@ -13,7 +13,9 @@ import { detectProjectJoints } from "@/features/joints/detectJoints";
 import { EXAMPLE_PROFILES } from "@/features/profiles/defaults";
 import { createEmptyProject, createExampleProject } from "@/features/projects/defaults";
 import { calculateProjectEstimate, roundMoney } from "@/lib/calculations/estimate";
+import { issueSessionForUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { resetDatabaseForTests } from "@/lib/db/sqlite";
+import { upsertOAuthUser } from "@/lib/db/usersRepository";
 import { generateExcelBuffer } from "@/lib/export/excelGenerator";
 import { generatePdfBuffer } from "@/lib/export/pdfGenerator";
 import { computeBeamTransform3D } from "@/lib/geometry/beam3d";
@@ -157,8 +159,26 @@ describe("Stage 8: Geometry, Calculation Accuracy, API Persistence & Performance
   });
 
   it("handles full SQLite API lifecycle, validation errors, and Excel/PDF API routes", async () => {
-    // 1. GET /api/projects (auto-seeded example)
-    const listRes = await getProjectsRoute();
+    // 0. Без сессии API проектов защищено (401)
+    const unauthRes = await getProjectsRoute(new Request("http://localhost/api/projects"));
+    expect(unauthRes.status).toBe(401);
+
+    const testUser = upsertOAuthUser({
+      provider: "yandex",
+      providerUserId: "stage8-tester",
+      email: "stage8@metalcalc.local",
+      emailVerified: true,
+      name: "Stage8 Tester",
+    });
+    const session = issueSessionForUser(testUser.id, true);
+    const authCookie = `${SESSION_COOKIE_NAME}=${session.rawToken}`;
+
+    // 1. GET /api/projects (персональный auto-seeded example)
+    const listRes = await getProjectsRoute(
+      new Request("http://localhost/api/projects", {
+        headers: { cookie: authCookie },
+      })
+    );
     expect(listRes.status).toBe(200);
     const listData = (await listRes.json()) as { projects: Array<{ id: string }> };
     expect(listData.projects.length).toBe(1);
@@ -167,7 +187,7 @@ describe("Stage 8: Geometry, Calculation Accuracy, API Persistence & Performance
     const invalidRes = await postProjectRoute(
       new Request("http://localhost/api/projects", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", cookie: authCookie },
         body: JSON.stringify({ broken: true }),
       })
     );
@@ -179,7 +199,7 @@ describe("Stage 8: Geometry, Calculation Accuracy, API Persistence & Performance
     const createRes = await postProjectRoute(
       new Request("http://localhost/api/projects", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", cookie: authCookie },
         body: JSON.stringify(custom),
       })
     );
@@ -197,7 +217,7 @@ describe("Stage 8: Geometry, Calculation Accuracy, API Persistence & Performance
     const putRes = await putProjectByIdRoute(
       new Request(`http://localhost/api/projects/${custom.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", cookie: authCookie },
         body: JSON.stringify(custom),
       }),
       { params: Promise.resolve({ id: custom.id }) }
@@ -207,7 +227,7 @@ describe("Stage 8: Geometry, Calculation Accuracy, API Persistence & Performance
     const renameRes = await patchProjectRoute(
       new Request(`http://localhost/api/projects/${custom.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", cookie: authCookie },
         body: JSON.stringify({ action: "rename", name: "Ферма 6м Переименована" }),
       }),
       { params: Promise.resolve({ id: custom.id }) }
@@ -219,7 +239,7 @@ describe("Stage 8: Geometry, Calculation Accuracy, API Persistence & Performance
     const dupRes = await patchProjectRoute(
       new Request(`http://localhost/api/projects/${custom.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", cookie: authCookie },
         body: JSON.stringify({ action: "duplicate" }),
       }),
       { params: Promise.resolve({ id: custom.id }) }
@@ -230,12 +250,16 @@ describe("Stage 8: Geometry, Calculation Accuracy, API Persistence & Performance
     const profilesPutRes = await putProfilesRoute(
       new Request("http://localhost/api/profiles", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", cookie: authCookie },
         body: JSON.stringify({ profiles: EXAMPLE_PROFILES }),
       })
     );
     expect(profilesPutRes.status).toBe(200);
-    const profilesGetRes = await getProfilesRoute();
+    const profilesGetRes = await getProfilesRoute(
+      new Request("http://localhost/api/profiles", {
+        headers: { cookie: authCookie },
+      })
+    );
     expect(profilesGetRes.status).toBe(200);
 
     // 6. Export Excel & PDF via Route Handlers
@@ -264,13 +288,18 @@ describe("Stage 8: Geometry, Calculation Accuracy, API Persistence & Performance
 
     // 7. DELETE & 404 verification
     const delRes = await deleteProjectRoute(
-      new Request(`http://localhost/api/projects/${custom.id}`, { method: "DELETE" }),
+      new Request(`http://localhost/api/projects/${custom.id}`, {
+        method: "DELETE",
+        headers: { cookie: authCookie },
+      }),
       { params: Promise.resolve({ id: custom.id }) }
     );
     expect(delRes.status).toBe(200);
 
     const missingRes = await getProjectByIdRoute(
-      new Request(`http://localhost/api/projects/${custom.id}`),
+      new Request(`http://localhost/api/projects/${custom.id}`, {
+        headers: { cookie: authCookie },
+      }),
       { params: Promise.resolve({ id: custom.id }) }
     );
     expect(missingRes.status).toBe(404);

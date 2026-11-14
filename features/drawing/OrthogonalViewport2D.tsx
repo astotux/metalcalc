@@ -5,7 +5,11 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { Circle, Group, Layer, Line, Rect, Stage, Text } from "react-konva";
 import { Maximize2, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import { getElementLengthMm, getElementMidpoint, roundMm } from "@/lib/geometry/elements";
-import { computeElementTrims, projectBeamPolygon2D } from "@/lib/geometry/jointTrimming";
+import {
+  computeElementTrims,
+  projectBeamPolygon2D,
+  sortElementsByPlaneDepth,
+} from "@/lib/geometry/jointTrimming";
 import {
   delta2DToDelta3D,
   distancePointToSegment2D,
@@ -387,17 +391,29 @@ export const OrthogonalViewport2D = forwardRef<
   const findTopElementAt = useCallback(
     (worldMm: Point2D): ConstructionElement | null => {
       const toleranceMm = Math.max(14, 14 / scale);
+      const getDepth = (el: ConstructionElement) =>
+        plane === "xy"
+          ? (el.start.z + el.end.z) / 2
+          : plane === "xz"
+            ? (el.start.y + el.end.y) / 2
+            : (el.start.x + el.end.x) / 2;
+
       let best: ConstructionElement | null = null;
       let bestDist = toleranceMm;
+      let bestDepth = -Infinity;
 
       for (let i = elements.length - 1; i >= 0; i -= 1) {
         const el = elements[i];
         const a = projectPoint3DToPlane2D(el.start, plane);
         const b = projectPoint3DToPlane2D(el.end, plane);
         const d = distancePointToSegment2D(worldMm, a, b);
-        if (d <= bestDist) {
-          bestDist = d;
-          best = el;
+        if (d <= toleranceMm) {
+          const depth = getDepth(el);
+          if (best === null || depth > bestDepth + 1 || (Math.abs(depth - bestDepth) <= 1 && d < bestDist)) {
+            bestDist = d;
+            bestDepth = depth;
+            best = el;
+          }
         }
       }
       return best;
@@ -882,6 +898,11 @@ export const OrthogonalViewport2D = forwardRef<
     [effectiveElements, joints, profiles]
   );
 
+  const sortedEffectiveElements = useMemo(
+    () => sortElementsByPlaneDepth(effectiveElements, profileMap, elementTrims, plane),
+    [effectiveElements, elementTrims, plane, profileMap]
+  );
+
   const canvasCursor = useMemo(() => {
     if (dragAction?.kind === "pan") return "grabbing";
     if (isSpacePressed) return "grab";
@@ -1065,9 +1086,9 @@ export const OrthogonalViewport2D = forwardRef<
           )}
         </Layer>
 
-        {/* Элементы конструкции и реальные 3D-размеры */}
+        {/* Элементы конструкции и реальные 3D-размеры (от дальних к ближним по глубине) */}
         <Layer>
-          {effectiveElements.map((element) => {
+          {sortedEffectiveElements.map((element) => {
             const profile = profileMap.get(element.profileId);
             const isSelected = selectedSet.has(element.id);
             const isHovered = hoveredElementId === element.id;

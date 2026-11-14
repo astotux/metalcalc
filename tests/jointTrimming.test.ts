@@ -6,6 +6,7 @@ import {
   computeElementTrims,
   getBeamOuterCorners3D,
   projectBeamPolygon2D,
+  sortElementsByPlaneDepth,
 } from "@/lib/geometry/jointTrimming";
 import type { ConstructionElement, JointConnection, MaterialProfile } from "@/types";
 
@@ -218,5 +219,46 @@ describe("Сращивание и подрезка угловых стыков (
     expect(size.x).toBeCloseTo(0.04, 4);
     expect(size.y).toBeCloseTo(0.04, 4);
     geometry.dispose();
+  });
+
+  it("сортирует элементы по глубине вида (от дальних к ближним), чтобы передние балки перекрывали задние", () => {
+    const frontBeam: ConstructionElement = {
+      id: "front",
+      type: "beam",
+      start: { x: 0, y: 600, z: 0 },
+      end: { x: 1200, y: 600, z: 0 },
+      profileId: "p40",
+    };
+    const backBeam: ConstructionElement = {
+      id: "back",
+      type: "beam",
+      start: { x: 0, y: 0, z: 0 },
+      end: { x: 1200, y: 0, z: 0 },
+      profileId: "p40",
+    };
+    const innerDiag: ConstructionElement = {
+      id: "diag",
+      type: "beam",
+      start: { x: 400, y: 0, z: 0 },
+      end: { x: 900, y: 600, z: 0 },
+      profileId: "p40",
+    };
+    const profMap = new Map([[prof40.id, prof40]]);
+    const els = [frontBeam, backBeam, innerDiag];
+    const trims = computeElementTrims(els, [prof40]);
+
+    // На виде спереди (XZ) глубина идёт по +Y: сначала back(0), потом diag(300), последняя front(600)
+    const sortedXz = sortElementsByPlaneDepth(els, profMap, trims, "xz");
+    expect(sortedXz.map((e) => e.id)).toEqual(["back", "diag", "front"]);
+
+    // На виде сверху (XY) более высокий профиль (p60/p40) рисуется поверх более тонкого при одном Z
+    const thinDiag: ConstructionElement = { ...innerDiag, profileId: "p20" };
+    const prof20: MaterialProfile = { ...prof40, id: "p20", widthMm: 20, heightMm: 20 };
+    const profMap2 = new Map([
+      [prof40.id, prof40],
+      [prof20.id, prof20],
+    ]);
+    const sortedXy = sortElementsByPlaneDepth([thinDiag, frontBeam], profMap2, trims, "xy");
+    expect(sortedXy.map((e) => e.id)).toEqual(["diag", "front"]);
   });
 });

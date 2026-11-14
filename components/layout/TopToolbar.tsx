@@ -19,6 +19,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { EstimateModal } from "@/components/common/EstimateModal";
+import { AccountHeaderBadge } from "@/components/auth/AccountHeaderBadge";
 import { downloadProjectExcel, downloadProjectPdf } from "@/features/export/exportClient";
 import { useProjectStore } from "@/store/useProjectStore";
 import { useThemeStore } from "@/store/useThemeStore";
@@ -278,6 +279,8 @@ export function TopToolbar() {
             <Settings className="h-3.5 w-3.5" />
             <span className="hidden md:inline">Настройки</span>
           </Link>
+
+          <AccountHeaderBadge />
 
           <button
             type="button"

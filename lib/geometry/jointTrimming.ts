@@ -637,3 +637,45 @@ export function projectBeamPolygon2D(
   });
   return convexHull2D(projected);
 }
+
+/**
+ * Сортирует элементы в порядке художника (от дальних к ближним относительно камеры
+ * выбранной ортогональной проекции), чтобы ближние балки перекрывали дальние,
+ * а не просвечивали насквозь.
+ */
+export function sortElementsByPlaneDepth<T extends Pick<ConstructionElement, "id" | "start" | "end" | "profileId">>(
+  elements: T[],
+  profileMap: Map<string, MaterialProfile>,
+  trims: Map<string, BeamTrimData>,
+  plane: "xy" | "xz" | "yz"
+): T[] {
+  const getDepth = (p: Point3D) => (plane === "xy" ? p.z : plane === "xz" ? p.y : p.x);
+
+  return elements
+    .map((el, index) => {
+      const corners = getBeamOuterCorners3D(el, profileMap.get(el.profileId), trims.get(el.id));
+      let sum = 0;
+      let maxD = -Infinity;
+      for (const c of corners) {
+        const d = getDepth(c);
+        sum += d;
+        if (d > maxD) maxD = d;
+      }
+      return {
+        el,
+        index,
+        avgDepth: sum / corners.length,
+        maxDepth: maxD,
+      };
+    })
+    .sort((a, b) => {
+      if (Math.abs(a.avgDepth - b.avgDepth) > 1) {
+        return a.avgDepth - b.avgDepth;
+      }
+      if (Math.abs(a.maxDepth - b.maxDepth) > 0.5) {
+        return a.maxDepth - b.maxDepth;
+      }
+      return a.index - b.index;
+    })
+    .map((item) => item.el);
+}

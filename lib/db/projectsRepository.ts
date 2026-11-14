@@ -4,6 +4,13 @@ import { calculateProjectEstimate } from "@/lib/calculations/estimate";
 import { getDatabase } from "@/lib/db/sqlite";
 import type { CurrencyCode, MaterialProfile, MetalCalcProject, ProfileShapeType } from "@/types";
 
+export class ProjectForbiddenError extends Error {
+  constructor(message = "Нет прав доступа к этому проекту.") {
+    super(message);
+    this.name = "ProjectForbiddenError";
+  }
+}
+
 export interface DbProjectSummary {
   id: string;
   name: string;
@@ -17,17 +24,39 @@ export interface DbProjectSummary {
   updatedAt: string;
 }
 
-/** При первом обращении к пустой БД создаёт демонстрационный проект-пример и базовый каталог. */
-function ensureSeeded(): void {
+/** При первом обращении создаёт персональный стартовый пример и каталог профилей для пользователя (или общие для системного режима без userId). */
+function ensureSeeded(ownerUserId?: string | null): void {
   const db = getDatabase();
+  const normalizedUserId = ownerUserId ?? null;
+
+  if (normalizedUserId) {
+    const countRow = db
+      .prepare("SELECT COUNT(*) as cnt FROM projects WHERE user_id = ?")
+      .get(normalizedUserId) as { cnt: number };
+
+    if (countRow.cnt === 0) {
+      const example = createExampleProject();
+      example.id = `proj-example-${normalizedUserId}`;
+      saveProjectToDb(example, normalizedUserId);
+    }
+
+    const catRow = db
+      .prepare("SELECT user_id FROM user_profile_catalogs WHERE user_id = ?")
+      .get(normalizedUserId) as { user_id: string } | undefined;
+
+    if (!catRow) {
+      saveCatalogProfilesToDb(EXAMPLE_PROFILES, normalizedUserId);
+    }
+    return;
+  }
 
   const countRow = db
-    .prepare("SELECT COUNT(*) as cnt FROM projects")
+    .prepare("SELECT COUNT(*) as cnt FROM projects WHERE user_id IS NULL")
     .get() as { cnt: number };
 
   if (countRow.cnt === 0) {
     const example = createExampleProject();
-    saveProjectToDb(example);
+    saveProjectToDb(example, null);
   }
 
   const catCountRow = db
@@ -35,20 +64,26 @@ function ensureSeeded(): void {
     .get() as { cnt: number };
 
   if (catCountRow.cnt === 0) {
-    saveCatalogProfilesToDb(EXAMPLE_PROFILES);
+    saveCatalogProfilesToDb(EXAMPLE_PROFILES, null);
   }
 }
 
-export function listProjectsFromDb(): DbProjectSummary[] {
-  ensureSeeded();
+export function listProjectsFromDb(viewerUserId?: string | null): DbProjectSummary[] {
+  const normalizedUserId = viewerUserId ?? null;
+  ensureSeeded(normalizedUserId);
   const db = getDatabase();
-  const rows = db
-    .prepare(
-      `SELECT id, name, description, is_example, element_count, total_length_mm, total_cost, currency, created_at, updated_at
+  const query = normalizedUserId
+    ? `SELECT id, name, description, is_example, element_count, total_length_mm, total_cost, currency, created_at, updated_at
        FROM projects
+       WHERE user_id = ?
        ORDER BY updated_at DESC`
-    )
-    .all() as Array<{
+    : `SELECT id, name, description, is_example, element_count, total_length_mm, total_cost, currency, created_at, updated_at
+       FROM projects
+       WHERE user_id IS NULL
+       ORDER BY updated_at DESC`;
+
+  const stmt = db.prepare(query);
+  const rows = (normalizedUserId ? stmt.all(normalizedUserId) : stmt.all()) as Array<{
     id: string;
     name: string;
     description: string | null;
@@ -75,14 +110,22 @@ export function listProjectsFromDb(): DbProjectSummary[] {
   }));
 }
 
-export function getProjectFromDb(id: string): MetalCalcProject | null {
-  ensureSeeded();
+export function getProjectFromDb(
+  id: string,
+  viewerUserId?: string | null
+): MetalCalcProject | null {
+  const normalizedUserId = viewerUserId ?? null;
+  ensureSeeded(normalizedUserId);
   const db = getDatabase();
   const row = db
-    .prepare("SELECT data_json FROM projects WHERE id = ?")
-    .get(id) as { data_json: string } | undefined;
+    .prepare("SELECT data_json, user_id FROM projects WHERE id = ?")
+    .get(id) as { data_json: string; user_id: string | null } | undefined;
 
   if (!row) return null;
+  if ((row.user_id ?? null) !== normalizedUserId) {
+    return null;
+  }
+
   try {
     return JSON.parse(row.data_json) as MetalCalcProject;
   } catch {
@@ -90,14 +133,26 @@ export function getProjectFromDb(id: string): MetalCalcProject | null {
   }
 }
 
-export function saveProjectToDb(project: MetalCalcProject): MetalCalcProject {
+export function saveProjectToDb(
+  project: MetalCalcProject,
+  ownerUserId?: string | null
+): MetalCalcProject {
   const db = getDatabase();
+  const normalizedUserId = ownerUserId ?? null;
   const now = new Date().toISOString();
   const normalized: MetalCalcProject = {
     ...project,
     createdAt: project.createdAt || now,
     updatedAt: now,
   };
+
+  const existingOwner = db
+    .prepare("SELECT user_id FROM projects WHERE id = ?")
+    .get(normalized.id) as { user_id: string | null } | undefined;
+
+  if (existingOwner && (existingOwner.user_id ?? null) !== normalizedUserId) {
+    throw new ProjectForbiddenError("Нет прав доступа на изменение чужого проекта.");
+  }
 
   const estimate = calculateProjectEstimate(
     normalized.elements,
@@ -110,8 +165,8 @@ export function saveProjectToDb(project: MetalCalcProject): MetalCalcProject {
     `INSERT INTO projects (
       id, name, description, is_example, data_json,
       element_count, total_length_mm, total_cost, currency,
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      created_at, updated_at, user_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
       description = excluded.description,
@@ -133,28 +188,39 @@ export function saveProjectToDb(project: MetalCalcProject): MetalCalcProject {
     estimate.totalCost,
     estimate.currency,
     normalized.createdAt,
-    normalized.updatedAt
+    normalized.updatedAt,
+    normalizedUserId
   );
 
   return normalized;
 }
 
-export function renameProjectInDb(id: string, name: string): MetalCalcProject | null {
-  const existing = getProjectFromDb(id);
+export function renameProjectInDb(
+  id: string,
+  name: string,
+  viewerUserId?: string | null
+): MetalCalcProject | null {
+  const normalizedUserId = viewerUserId ?? null;
+  const existing = getProjectFromDb(id, normalizedUserId);
   if (!existing) return null;
   const trimmed = name.trim() || "Без названия";
-  return saveProjectToDb({
-    ...existing,
-    name: trimmed,
-    isExample: false,
-  });
+  return saveProjectToDb(
+    {
+      ...existing,
+      name: trimmed,
+      isExample: false,
+    },
+    normalizedUserId
+  );
 }
 
 export function duplicateProjectInDb(
   id: string,
-  newName?: string
+  newName?: string,
+  viewerUserId?: string | null
 ): MetalCalcProject | null {
-  const existing = getProjectFromDb(id);
+  const normalizedUserId = viewerUserId ?? null;
+  const existing = getProjectFromDb(id, normalizedUserId);
   if (!existing) return null;
   const now = new Date().toISOString();
   const copy: MetalCalcProject = {
@@ -165,18 +231,49 @@ export function duplicateProjectInDb(
     createdAt: now,
     updatedAt: now,
   };
-  return saveProjectToDb(copy);
+  return saveProjectToDb(copy, normalizedUserId);
 }
 
-export function deleteProjectInDb(id: string): boolean {
+export function deleteProjectInDb(
+  id: string,
+  viewerUserId?: string | null
+): boolean {
+  const normalizedUserId = viewerUserId ?? null;
+  const existing = getProjectFromDb(id, normalizedUserId);
+  if (!existing) return false;
   const db = getDatabase();
-  const res = db.prepare("DELETE FROM projects WHERE id = ?").run(id);
+  const res = normalizedUserId
+    ? db
+        .prepare("DELETE FROM projects WHERE id = ? AND user_id = ?")
+        .run(id, normalizedUserId)
+    : db
+        .prepare("DELETE FROM projects WHERE id = ? AND user_id IS NULL")
+        .run(id);
   return Number(res.changes) > 0;
 }
 
-export function listCatalogProfilesFromDb(): MaterialProfile[] {
-  ensureSeeded();
+export function listCatalogProfilesFromDb(
+  ownerUserId?: string | null
+): MaterialProfile[] {
+  const normalizedUserId = ownerUserId ?? null;
+  ensureSeeded(normalizedUserId);
   const db = getDatabase();
+
+  if (normalizedUserId) {
+    const row = db
+      .prepare("SELECT profiles_json FROM user_profile_catalogs WHERE user_id = ?")
+      .get(normalizedUserId) as { profiles_json: string } | undefined;
+
+    if (!row) {
+      return EXAMPLE_PROFILES.map((p) => ({ ...p }));
+    }
+    try {
+      return JSON.parse(row.profiles_json) as MaterialProfile[];
+    } catch {
+      return EXAMPLE_PROFILES.map((p) => ({ ...p }));
+    }
+  }
+
   const rows = db
     .prepare(
       `SELECT id, name, shape_type, width_mm, height_mm, wall_thickness_mm, price_per_meter, color, description, is_example
@@ -209,9 +306,24 @@ export function listCatalogProfilesFromDb(): MaterialProfile[] {
   }));
 }
 
-export function saveCatalogProfilesToDb(profiles: MaterialProfile[]): void {
+export function saveCatalogProfilesToDb(
+  profiles: MaterialProfile[],
+  ownerUserId?: string | null
+): void {
   const db = getDatabase();
   const now = new Date().toISOString();
+  const normalizedUserId = ownerUserId ?? null;
+
+  if (normalizedUserId) {
+    db.prepare(
+      `INSERT INTO user_profile_catalogs (user_id, profiles_json, updated_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(user_id) DO UPDATE SET
+         profiles_json = excluded.profiles_json,
+         updated_at = excluded.updated_at`
+    ).run(normalizedUserId, JSON.stringify(profiles), now);
+    return;
+  }
 
   db.exec("BEGIN");
   try {

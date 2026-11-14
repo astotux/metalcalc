@@ -1,5 +1,9 @@
 import { buildProjectExportData, formatMoney, type ProjectExportData } from "@/lib/export/buildExportSummary";
-import { computeElementTrims, projectBeamPolygon2D } from "@/lib/geometry/jointTrimming";
+import {
+  computeElementTrims,
+  projectBeamPolygon2D,
+  sortElementsByPlaneDepth,
+} from "@/lib/geometry/jointTrimming";
 import type { MaterialProfile, MetalCalcProject } from "@/types";
 
 interface PdfMakeRuntime {
@@ -156,8 +160,14 @@ function buildProjectionCanvas(
   const lineOutlineWidth = plane === "xy" ? 4.0 : 3.4;
   const lineCoreWidth = plane === "xy" ? 2.4 : 2.0;
   const trims = computeElementTrims(project.elements, project.profiles, project.joints);
+  const sortedElements = sortElementsByPlaneDepth(
+    project.elements,
+    profileMap,
+    trims,
+    plane
+  );
 
-  for (const el of project.elements) {
+  for (const el of sortedElements) {
     const p1 = projectToPdfPlane(el.start.x, el.start.y, el.start.z, plane);
     const p2 = projectToPdfPlane(el.end.x, el.end.y, el.end.z, plane);
     const x1 = toPdfX(p1.u);
