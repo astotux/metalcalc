@@ -111,7 +111,7 @@ async function sendViaSmtp(
       throw new Error(`SMTP greeting failed: ${greeting.text}`);
     }
 
-    const heloDomain = config.from.split("@")[1] || "localhost";
+    const heloDomain = "metalcalc.online";
     const ehlo = await sendSmtpCommand(socket, `EHLO ${heloDomain}`, [250]);
 
     if (!config.secure && /STARTTLS/i.test(ehlo)) {
