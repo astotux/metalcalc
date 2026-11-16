@@ -35,6 +35,15 @@ export function ProfileCatalogModal({
   initialEditProfileId = null,
   onClose,
 }: ProfileCatalogModalProps) {
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
+
   if (!open || typeof document === "undefined") return null;
   return createPortal(
     <ProfileCatalogDialogContent
@@ -112,7 +121,6 @@ function ProfileCatalogDialogContent({
   const watchedWall = useWatch({ control, name: "wallThicknessMm" }) || 2;
   const watchedColor = useWatch({ control, name: "color" }) || "#38bdf8";
 
-  // Счётчик использования каждого профиля в текущей конструкции
   const usageCountMap = useMemo(() => {
     const map = new Map<string, number>();
     for (const el of project.elements) {
@@ -152,7 +160,6 @@ function ProfileCatalogDialogContent({
     });
   };
 
-  // При выборе квадратной трубы синхронизируем высоту с шириной
   useEffect(() => {
     if (watchedShape === "square_tube" && watchedHeight !== watchedWidth) {
       setValue("heightMm", watchedWidth, { shouldValidate: true });
@@ -219,7 +226,6 @@ function ProfileCatalogDialogContent({
 
   const editingUsageCount = editingId ? (usageCountMap.get(editingId) ?? 0) : 0;
 
-  // Параметры SVG-превью сечения
   const maxDim = Math.max(10, watchedWidth, watchedHeight);
   const svgScale = 68 / maxDim;
   const rectW = Math.max(8, watchedWidth * svgScale);
@@ -227,12 +233,20 @@ function ProfileCatalogDialogContent({
   const wallPx = Math.max(1.5, Math.min(rectW / 3, rectH / 3, watchedWall * svgScale));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3 sm:p-4 backdrop-blur-xs">
-      <div className="flex max-h-[92dvh] w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-[var(--mc-border-strong)] bg-[var(--mc-bg-panel)] text-[var(--mc-text)] shadow-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 backdrop-blur-xs sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="profile-catalog-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="flex max-h-[92dvh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-[var(--mc-border-strong)] bg-[var(--mc-bg-panel)] text-[var(--mc-text)] shadow-2xl">
         {/* Шапка */}
-        <div className="flex items-center justify-between border-b border-[var(--mc-border)] px-4 py-3">
+        <div className="flex items-center justify-between border-b border-[var(--mc-border)] px-5 py-3.5">
           <div>
-            <h2 className="text-sm font-semibold text-[var(--mc-text)]">
+            <h2 id="profile-catalog-title" className="text-sm font-semibold text-[var(--mc-text)]">
               Каталог профильных труб и материалов
             </h2>
             <p className="text-[11px] text-[var(--mc-text-muted)]">
@@ -242,7 +256,7 @@ function ProfileCatalogDialogContent({
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1 text-[var(--mc-text-muted)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
+            className="rounded-md p-1.5 text-[var(--mc-text-muted)] transition-colors hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
             aria-label="Закрыть каталог"
           >
             <X className="h-4 w-4" />
@@ -252,8 +266,8 @@ function ProfileCatalogDialogContent({
         {/* Тело модального окна */}
         <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-12 lg:overflow-hidden">
           {/* Левая часть: поиск, фильтры и список */}
-          <div className="flex min-h-0 flex-col border-b border-[var(--mc-border)] lg:col-span-7 lg:border-b-0 lg:border-r">
-            <div className="space-y-2.5 border-b border-[var(--mc-border)] p-3">
+          <div className="flex min-h-0 flex-col border-b border-[var(--mc-border)] lg:col-span-7 lg:border-r lg:border-b-0">
+            <div className="space-y-2.5 border-b border-[var(--mc-border)] p-3.5">
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--mc-text-subtle)]" />
@@ -262,13 +276,13 @@ function ProfileCatalogDialogContent({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Поиск по названию, размеру (40×20) или описанию..."
-                    className="w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] py-1.5 pl-8 pr-2.5 text-xs text-[var(--mc-text)] placeholder-[var(--mc-text-subtle)] outline-none focus:border-[var(--mc-brand-border)]"
+                    className="w-full rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-input)] py-1.5 pl-8 pr-2.5 text-xs text-[var(--mc-text)] placeholder-[var(--mc-text-subtle)] outline-none focus:border-[var(--mc-brand-light)]"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={resetToNewMode}
-                  className="inline-flex items-center gap-1 rounded bg-[var(--mc-brand)] px-2.5 py-1.5 text-xs font-medium text-[var(--mc-brand-text)] hover:bg-[var(--mc-brand-light)]"
+                  className="inline-flex items-center gap-1 rounded-md bg-[var(--mc-brand)] px-3 py-1.5 text-xs font-medium text-[var(--mc-brand-text)] transition-colors hover:bg-[var(--mc-brand-light)]"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   Создать профиль
@@ -288,7 +302,7 @@ function ProfileCatalogDialogContent({
                       key={item.id}
                       type="button"
                       onClick={() => setShapeFilter(item.id)}
-                      className={`rounded border px-2 py-1 text-[11px] transition-colors ${
+                      className={`rounded-md border px-2.5 py-1 text-[11px] font-medium transition-colors ${
                         shapeFilter === item.id
                           ? "border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] text-[var(--mc-brand-inline)]"
                           : "border-[var(--mc-border)] bg-[var(--mc-bg-input)] text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
@@ -311,9 +325,9 @@ function ProfileCatalogDialogContent({
               </div>
             </div>
 
-            <div className="flex-1 space-y-2 overflow-y-auto p-3">
+            <div className="flex-1 space-y-2 overflow-y-auto p-3.5">
               {filteredProfiles.length === 0 ? (
-                <div className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] p-6 text-center text-xs text-[var(--mc-text-subtle)]">
+                <div className="rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-input)] p-6 text-center text-xs text-[var(--mc-text-subtle)]">
                   Профили по заданному фильтру не найдены.
                 </div>
               ) : (
@@ -325,7 +339,7 @@ function ProfileCatalogDialogContent({
                   return (
                     <div
                       key={profile.id}
-                      className={`flex items-center justify-between gap-3 rounded border p-2.5 transition-colors ${
+                      className={`flex items-center justify-between gap-3 rounded-lg border p-2.5 transition-colors ${
                         isEditing
                           ? "border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)]"
                           : "border-[var(--mc-border)] bg-[var(--mc-bg-input)] hover:border-[var(--mc-border-strong)]"
@@ -337,22 +351,22 @@ function ProfileCatalogDialogContent({
                           style={{ backgroundColor: profile.color }}
                         />
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <span className="truncate text-xs font-semibold text-[var(--mc-text)]">
                               {profile.name}
                             </span>
                             {profile.isExample && (
-                              <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-[var(--mc-warning-text)]">
+                              <span className="rounded border border-[var(--mc-warning-border)] bg-[var(--mc-warning-soft)] px-1.5 py-0.5 text-[10px] text-[var(--mc-warning-text)]">
                                 Пример
                               </span>
                             )}
                             {isActive && (
-                              <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-[var(--mc-success-text)]">
+                              <span className="rounded border border-[var(--mc-success-border)] bg-[var(--mc-success-soft)] px-1.5 py-0.5 text-[10px] text-[var(--mc-success-text)]">
                                 Активный
                               </span>
                             )}
                           </div>
-                          <div className="mt-0.5 text-[11px] text-[var(--mc-text-muted)]">
+                          <div className="mt-0.5 font-mono text-[11px] text-[var(--mc-text-muted)]">
                             {formatProfileDimensions(profile)} ·{" "}
                             <strong className="text-[var(--mc-text)]">
                               {formatMoney(profile.pricePerMeter, project.calculationSettings.currency)}/м
@@ -371,9 +385,9 @@ function ProfileCatalogDialogContent({
                         <button
                           type="button"
                           onClick={() => setActiveProfileId(profile.id)}
-                          className={`rounded border px-2 py-1 text-[11px] ${
+                          className={`rounded-md border px-2.5 py-1 text-[11px] font-medium transition-colors ${
                             isActive
-                              ? "border-emerald-500/40 bg-emerald-500/15 text-[var(--mc-success-text)]"
+                              ? "border-[var(--mc-success-border)] bg-[var(--mc-success-soft)] text-[var(--mc-success-text)]"
                               : "border-[var(--mc-border-strong)] bg-[var(--mc-bg-elevated)] text-[var(--mc-text-secondary)] hover:text-[var(--mc-text)]"
                           }`}
                           title="Сделать активным для черчения"
@@ -383,16 +397,18 @@ function ProfileCatalogDialogContent({
                         <button
                           type="button"
                           onClick={() => fillFormFromProfile(profile)}
-                          className="rounded border border-[var(--mc-border-strong)] bg-[var(--mc-bg-elevated)] p-1.5 text-[var(--mc-text-secondary)] hover:text-[var(--mc-text)]"
+                          className="rounded-md border border-[var(--mc-border-strong)] bg-[var(--mc-bg-elevated)] p-1.5 text-[var(--mc-text-secondary)] transition-colors hover:text-[var(--mc-text)]"
                           title="Редактировать профиль"
+                          aria-label={`Редактировать ${profile.name}`}
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDelete(profile)}
-                          className="rounded border border-rose-500/30 bg-rose-500/10 p-1.5 text-[var(--mc-danger-text)] hover:bg-rose-500/20"
+                          className="rounded-md border border-[var(--mc-danger-border)] bg-[var(--mc-danger-soft)] p-1.5 text-[var(--mc-danger-text)] transition-colors hover:opacity-85"
                           title="Удалить профиль"
+                          aria-label={`Удалить ${profile.name}`}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -407,14 +423,14 @@ function ProfileCatalogDialogContent({
           {/* Правая часть: форма создания / редактирования */}
           <div className="flex flex-col overflow-y-auto p-4 lg:col-span-5">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--mc-text-muted)]">
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-text-muted)]">
                 {editingId ? "Редактирование профиля" : "Новый профиль"}
               </h3>
               {editingId && (
                 <button
                   type="button"
                   onClick={resetToNewMode}
-                  className="text-[11px] text-[var(--mc-brand-inline)] hover:underline"
+                  className="text-[11px] font-medium text-[var(--mc-brand-inline)] hover:underline"
                 >
                   + Новый вместо правки
                 </button>
@@ -423,11 +439,11 @@ function ProfileCatalogDialogContent({
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
               {/* Визуальное превью сечения */}
-              <div className="flex items-center gap-4 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] p-3">
+              <div className="flex items-center gap-4 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-input)] p-3">
                 <svg
                   width="88"
                   height="88"
-                  className="shrink-0 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-canvas)]"
+                  className="shrink-0 rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-canvas)]"
                 >
                   <rect
                     x={(88 - rectW) / 2}
@@ -451,7 +467,7 @@ function ProfileCatalogDialogContent({
                   />
                 </svg>
                 <div className="space-y-1 text-xs">
-                  <div className="font-medium text-[var(--mc-text)]">
+                  <div className="font-mono font-semibold text-[var(--mc-text)]">
                     {watchedWidth}×
                     {watchedShape === "square_tube" ? watchedWidth : watchedHeight}×
                     {watchedWall} мм
@@ -472,7 +488,7 @@ function ProfileCatalogDialogContent({
                 Тип сечения
                 <select
                   {...register("shapeType")}
-                  className="mt-1 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2.5 py-1.5 text-xs text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-border)]"
+                  className="mt-1 w-full rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2.5 py-1.5 text-xs text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
                 >
                   {PROFILE_SHAPE_CATALOG.map((shape) => (
                     <option
@@ -493,7 +509,7 @@ function ProfileCatalogDialogContent({
                   type="text"
                   {...register("name")}
                   placeholder="Например: Профиль 60×40×2"
-                  className="mt-1 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2.5 py-1.5 text-xs text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-border)]"
+                  className="mt-1 w-full rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2.5 py-1.5 text-xs text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
                 />
                 {errors.name && (
                   <span className="mt-0.5 block text-[11px] text-[var(--mc-danger-text)]">
@@ -509,7 +525,7 @@ function ProfileCatalogDialogContent({
                     type="number"
                     step="1"
                     {...register("widthMm", { valueAsNumber: true })}
-                    className="mt-1 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2 py-1.5 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-border)]"
+                    className="mt-1 w-full rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2 py-1.5 font-mono text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
                   />
                   {errors.widthMm && (
                     <span className="mt-0.5 block text-[10px] text-[var(--mc-danger-text)]">
@@ -525,7 +541,7 @@ function ProfileCatalogDialogContent({
                     step="1"
                     disabled={watchedShape === "square_tube"}
                     {...register("heightMm", { valueAsNumber: true })}
-                    className="mt-1 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2 py-1.5 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-border)] disabled:opacity-50"
+                    className="mt-1 w-full rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2 py-1.5 font-mono text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)] disabled:opacity-50"
                   />
                   {errors.heightMm && (
                     <span className="mt-0.5 block text-[10px] text-[var(--mc-danger-text)]">
@@ -540,7 +556,7 @@ function ProfileCatalogDialogContent({
                     type="number"
                     step="0.5"
                     {...register("wallThicknessMm", { valueAsNumber: true })}
-                    className="mt-1 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2 py-1.5 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-border)]"
+                    className="mt-1 w-full rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2 py-1.5 font-mono text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
                   />
                   {errors.wallThicknessMm && (
                     <span className="mt-0.5 block text-[10px] text-[var(--mc-danger-text)]">
@@ -552,12 +568,12 @@ function ProfileCatalogDialogContent({
 
               <div className="grid grid-cols-2 gap-2">
                 <label className="text-[11px] text-[var(--mc-text-muted)]">
-                  Цена за 1 погонный метр ({project.calculationSettings.currency})
+                  Цена за 1 п.м. ({project.calculationSettings.currency})
                   <input
                     type="number"
                     step="1"
                     {...register("pricePerMeter", { valueAsNumber: true })}
-                    className="mt-1 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2.5 py-1.5 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-border)]"
+                    className="mt-1 w-full rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2.5 py-1.5 font-mono text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
                   />
                   {errors.pricePerMeter && (
                     <span className="mt-0.5 block text-[10px] text-[var(--mc-danger-text)]">
@@ -583,6 +599,7 @@ function ProfileCatalogDialogContent({
                           className="h-4 w-4 rounded-xs border border-black/20"
                           style={{ backgroundColor: preset }}
                           title={preset}
+                          aria-label={`Выбрать цвет ${preset}`}
                         />
                       ))}
                     </div>
@@ -596,13 +613,12 @@ function ProfileCatalogDialogContent({
                   rows={2}
                   {...register("description")}
                   placeholder="Назначение профиля, примечания по поставщику..."
-                  className="mt-1 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2.5 py-1.5 text-xs text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-border)]"
+                  className="mt-1 w-full rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2.5 py-1.5 text-xs text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
                 />
               </label>
 
-              {/* Замена профиля у элементов, если редактируемый профиль используется */}
               {editingId && editingUsageCount > 0 && project.profiles.length > 1 && (
-                <div className="space-y-2 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] p-2.5">
+                <div className="space-y-2 rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-input)] p-2.5">
                   <div className="text-[11px] text-[var(--mc-text-secondary)]">
                     Используется в {editingUsageCount} элементах конструкции. Заменить на:
                   </div>
@@ -610,7 +626,7 @@ function ProfileCatalogDialogContent({
                     <select
                       value={replaceTargetId}
                       onChange={(e) => setReplaceTargetId(e.target.value)}
-                      className="flex-1 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] px-2 py-1 text-xs text-[var(--mc-text)] outline-none"
+                      className="flex-1 rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] px-2 py-1 text-xs text-[var(--mc-text)] outline-none"
                     >
                       <option value="">Выберите другой профиль...</option>
                       {project.profiles
@@ -630,7 +646,7 @@ function ProfileCatalogDialogContent({
                           setActionMessage("Профиль заменён у всех элементов конструкции.");
                         }
                       }}
-                      className="inline-flex items-center gap-1 rounded border border-[var(--mc-border-strong)] bg-[var(--mc-bg-elevated)] px-2.5 py-1 text-xs text-[var(--mc-text)] hover:bg-[var(--mc-bg-hover)] disabled:opacity-40"
+                      className="inline-flex items-center gap-1 rounded-md border border-[var(--mc-border-strong)] bg-[var(--mc-bg-elevated)] px-2.5 py-1 text-xs text-[var(--mc-text)] transition-colors hover:bg-[var(--mc-bg-hover)] disabled:opacity-40"
                     >
                       <RefreshCw className="h-3 w-3" />
                       Заменить
@@ -640,7 +656,7 @@ function ProfileCatalogDialogContent({
               )}
 
               {actionMessage && (
-                <div className="rounded border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] px-2.5 py-1.5 text-xs text-[var(--mc-text)]">
+                <div className="rounded-md border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] px-2.5 py-1.5 text-xs text-[var(--mc-text)]">
                   {actionMessage}
                 </div>
               )}
@@ -653,13 +669,13 @@ function ProfileCatalogDialogContent({
                       setActionMessage("Каталог сохранён как шаблон для новых проектов.");
                     }
                   }}
-                  className="rounded border border-[var(--mc-border-strong)] bg-[var(--mc-bg-elevated)] px-2.5 py-1.5 text-[11px] text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
+                  className="rounded-md border border-[var(--mc-border-strong)] bg-[var(--mc-bg-elevated)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--mc-text-secondary)] transition-colors hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
                 >
                   Сохранить как шаблон
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-1.5 rounded bg-[var(--mc-brand)] px-3 py-1.5 text-xs font-medium text-[var(--mc-brand-text)] hover:bg-[var(--mc-brand-light)]"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-[var(--mc-brand)] px-3.5 py-1.5 text-xs font-semibold text-[var(--mc-brand-text)] transition-colors hover:bg-[var(--mc-brand-light)]"
                 >
                   <Check className="h-3.5 w-3.5" />
                   {editingId ? "Сохранить изменения" : "Добавить в каталог"}

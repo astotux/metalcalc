@@ -6,10 +6,13 @@ import {
   ArrowRight,
   Box,
   Calculator,
+  CheckCircle2,
+  Compass,
   FileSpreadsheet,
   FileText,
   Layers,
   Moon,
+  Ruler,
   Sparkles,
   Sun,
 } from "lucide-react";
@@ -27,6 +30,7 @@ type DemoPresetId = "canopy" | "truss" | "frame";
 interface DemoPreset {
   id: DemoPresetId;
   label: string;
+  code: string;
   size: string;
   length: string;
   joints: number;
@@ -41,6 +45,7 @@ const DEMO_PRESETS: DemoPreset[] = [
   {
     id: "canopy",
     label: "Навес 6×4",
+    code: "PRJ-01",
     size: "6 000 × 4 000 × 2 600 мм",
     length: "54.6 м",
     joints: 16,
@@ -53,6 +58,7 @@ const DEMO_PRESETS: DemoPreset[] = [
   {
     id: "truss",
     label: "Ферма 6 м",
+    code: "PRJ-02",
     size: "6 000 × 750 мм",
     length: "28.4 м",
     joints: 12,
@@ -65,6 +71,7 @@ const DEMO_PRESETS: DemoPreset[] = [
   {
     id: "frame",
     label: "Стеллаж цех",
+    code: "PRJ-03",
     size: "2 400 × 800 × 2 100 мм",
     length: "32.0 м",
     joints: 20,
@@ -79,8 +86,7 @@ const DEMO_PRESETS: DemoPreset[] = [
 function IsometricPreviewSvg({ presetId }: { presetId: DemoPresetId }) {
   if (presetId === "truss") {
     return (
-      <svg viewBox="0 0 360 210" className="w-full h-full" aria-hidden="true">
-        {/* Нижний и верхний пояса фермы в объёме */}
+      <svg viewBox="0 0 360 210" className="h-full w-full" aria-hidden="true">
         <polygon
           points="36,142 308,92 324,102 52,152"
           fill="none"
@@ -90,7 +96,6 @@ function IsometricPreviewSvg({ presetId }: { presetId: DemoPresetId }) {
         />
         <line x1="36" y1="88" x2="308" y2="38" stroke="#f59e0b" strokeWidth="5.5" strokeLinecap="round" />
         <line x1="36" y1="142" x2="308" y2="92" stroke="#f59e0b" strokeWidth="5.5" strokeLinecap="round" />
-        {/* Стойки и раскосы */}
         <line x1="36" y1="88" x2="36" y2="142" stroke="#38bdf8" strokeWidth="4.5" />
         <line x1="126" y1="71" x2="126" y2="125" stroke="#38bdf8" strokeWidth="4.5" />
         <line x1="217" y1="55" x2="217" y2="109" stroke="#38bdf8" strokeWidth="4.5" />
@@ -99,6 +104,11 @@ function IsometricPreviewSvg({ presetId }: { presetId: DemoPresetId }) {
         <line x1="36" y1="142" x2="126" y2="71" stroke="#10b981" strokeWidth="3.5" />
         <line x1="126" y1="71" x2="217" y2="109" stroke="#10b981" strokeWidth="3.5" />
         <line x1="217" y1="109" x2="308" y2="38" stroke="#10b981" strokeWidth="3.5" />
+
+        <line x1="36" y1="164" x2="308" y2="114" stroke="#768196" strokeWidth="1" strokeDasharray="3 3" />
+        <text x="172" y="160" textAnchor="middle" fill="#949eb0" fontSize="10" fontFamily="monospace">
+          6 000 мм · пролёт
+        </text>
 
         {[
           [36, 88],
@@ -110,7 +120,7 @@ function IsometricPreviewSvg({ presetId }: { presetId: DemoPresetId }) {
           [308, 38],
           [308, 92],
         ].map(([cx, cy], i) => (
-          <circle key={i} cx={cx} cy={cy} r="4.5" fill="#fbbf24" stroke="#121013" strokeWidth="1.5" />
+          <circle key={i} cx={cx} cy={cy} r="4.5" fill="#fbbf24" stroke="#080a0e" strokeWidth="1.5" />
         ))}
       </svg>
     );
@@ -118,15 +128,13 @@ function IsometricPreviewSvg({ presetId }: { presetId: DemoPresetId }) {
 
   if (presetId === "frame") {
     return (
-      <svg viewBox="0 0 360 210" className="w-full h-full" aria-hidden="true">
-        {/* Задний контур */}
-        <line x1="115" y1="44" x2="115" y2="152" stroke="#9f4636" strokeWidth="4" />
-        <line x1="265" y1="28" x2="265" y2="136" stroke="#9f4636" strokeWidth="4" />
-        <line x1="115" y1="44" x2="265" y2="28" stroke="#9f4636" strokeWidth="4" />
-        <line x1="115" y1="98" x2="265" y2="82" stroke="#9f4636" strokeWidth="3.5" />
-        <line x1="115" y1="152" x2="265" y2="136" stroke="#9f4636" strokeWidth="4" />
+      <svg viewBox="0 0 360 210" className="h-full w-full" aria-hidden="true">
+        <line x1="115" y1="44" x2="115" y2="152" stroke="#cb5843" strokeWidth="4" />
+        <line x1="265" y1="28" x2="265" y2="136" stroke="#cb5843" strokeWidth="4" />
+        <line x1="115" y1="44" x2="265" y2="28" stroke="#cb5843" strokeWidth="4" />
+        <line x1="115" y1="98" x2="265" y2="82" stroke="#cb5843" strokeWidth="3.5" />
+        <line x1="115" y1="152" x2="265" y2="136" stroke="#cb5843" strokeWidth="4" />
 
-        {/* Поперечины ярусов */}
         {[
           [75, 68, 115, 44],
           [225, 52, 265, 28],
@@ -138,7 +146,6 @@ function IsometricPreviewSvg({ presetId }: { presetId: DemoPresetId }) {
           <line key={idx} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#38bdf8" strokeWidth="4" />
         ))}
 
-        {/* Передний фасад */}
         <line x1="75" y1="68" x2="75" y2="176" stroke="#f59e0b" strokeWidth="5" />
         <line x1="225" y1="52" x2="225" y2="160" stroke="#f59e0b" strokeWidth="5" />
         <line x1="75" y1="68" x2="225" y2="52" stroke="#f59e0b" strokeWidth="5" />
@@ -155,37 +162,31 @@ function IsometricPreviewSvg({ presetId }: { presetId: DemoPresetId }) {
           [115, 44],
           [265, 28],
         ].map(([cx, cy], i) => (
-          <circle key={i} cx={cx} cy={cy} r="4.2" fill="#fbbf24" stroke="#121013" strokeWidth="1.5" />
+          <circle key={i} cx={cx} cy={cy} r="4.2" fill="#fbbf24" stroke="#080a0e" strokeWidth="1.5" />
         ))}
       </svg>
     );
   }
 
-  // Навес 6x4 (по умолчанию)
   return (
-    <svg viewBox="0 0 360 210" className="w-full h-full" aria-hidden="true">
-      {/* Дальние стойки */}
-      <line x1="128" y1="56" x2="128" y2="146" stroke="#9f4636" strokeWidth="4.5" />
-      <line x1="286" y1="42" x2="286" y2="132" stroke="#9f4636" strokeWidth="4.5" />
+    <svg viewBox="0 0 360 210" className="h-full w-full" aria-hidden="true">
+      <line x1="128" y1="56" x2="128" y2="146" stroke="#cb5843" strokeWidth="4.5" />
+      <line x1="286" y1="42" x2="286" y2="132" stroke="#cb5843" strokeWidth="4.5" />
       <line x1="128" y1="56" x2="286" y2="42" stroke="#d97706" strokeWidth="4.5" />
 
-      {/* Стропила */}
       <line x1="70" y1="84" x2="128" y2="56" stroke="#38bdf8" strokeWidth="4.5" />
       <line x1="149" y1="77" x2="207" y2="49" stroke="#38bdf8" strokeWidth="4.5" />
       <line x1="228" y1="70" x2="286" y2="42" stroke="#38bdf8" strokeWidth="4.5" />
 
-      {/* Укосины */}
       <line x1="70" y1="112" x2="96" y2="82" stroke="#10b981" strokeWidth="3.5" />
       <line x1="228" y1="98" x2="202" y2="72" stroke="#10b981" strokeWidth="3.5" />
 
-      {/* Ближние стойки и балка */}
       <line x1="70" y1="84" x2="70" y2="176" stroke="#f59e0b" strokeWidth="5.5" />
       <line x1="228" y1="70" x2="228" y2="162" stroke="#f59e0b" strokeWidth="5.5" />
       <line x1="70" y1="84" x2="228" y2="70" stroke="#f59e0b" strokeWidth="5.5" />
 
-      {/* Подписи размеров */}
-      <line x1="70" y1="186" x2="228" y2="172" stroke="#867369" strokeWidth="1" strokeDasharray="3 3" />
-      <text x="148" y="192" textAnchor="middle" fill="#b29e93" fontSize="10" fontFamily="monospace">
+      <line x1="70" y1="186" x2="228" y2="172" stroke="#768196" strokeWidth="1" strokeDasharray="3 3" />
+      <text x="148" y="193" textAnchor="middle" fill="#949eb0" fontSize="10" fontFamily="monospace">
         6 000 мм
       </text>
 
@@ -197,7 +198,7 @@ function IsometricPreviewSvg({ presetId }: { presetId: DemoPresetId }) {
         [149, 77],
         [207, 49],
       ].map(([cx, cy], i) => (
-        <circle key={i} cx={cx} cy={cy} r="4.5" fill="#fbbf24" stroke="#121013" strokeWidth="1.5" />
+        <circle key={i} cx={cx} cy={cy} r="4.5" fill="#fbbf24" stroke="#080a0e" strokeWidth="1.5" />
       ))}
     </svg>
   );
@@ -223,32 +224,50 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
     DEMO_PRESETS.find((p) => p.id === activePresetId) ?? DEMO_PRESETS[0];
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[var(--mc-bg-app)] text-[var(--mc-text)] flex flex-col">
-      {/* Тонкое атмосферное свечение фона */}
+    <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-[var(--mc-bg-app)] text-[var(--mc-text)]">
+      {/* Фоновая инженерная сетка и мягкое свечение */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[760px] -translate-x-1/2 rounded-full opacity-25 blur-[120px]"
+        className="mc-blueprint-grid pointer-events-none absolute inset-x-0 top-0 h-[560px] opacity-30 [mask-image:linear-gradient(to_bottom,black_30%,transparent_100%)]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-44 left-1/2 h-[420px] w-[760px] -translate-x-1/2 rounded-full opacity-20 blur-[120px]"
         style={{
           background:
-            "radial-gradient(circle, rgba(159,70,54,0.65) 0%, rgba(108,45,44,0.25) 55%, transparent 80%)",
+            "radial-gradient(circle, rgba(203,88,67,0.7) 0%, rgba(181,72,52,0.22) 55%, transparent 80%)",
         }}
       />
 
       {/* Шапка */}
       <header className="sticky top-0 z-30 border-b border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/85 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--mc-brand)] text-xs font-bold text-[var(--mc-brand-text)] shadow-xs">
-              MC
-            </div>
-            <span className="text-sm font-semibold tracking-tight text-[var(--mc-text)]">
-              MetalCalc
-            </span>
-          </Link>
+          <div className="flex items-center gap-6">
+            <Link href="/" className="flex items-center gap-2.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--mc-brand)] font-mono text-xs font-bold text-[var(--mc-brand-text)] shadow-xs">
+                MC
+              </div>
+              <span className="text-sm font-semibold tracking-tight text-[var(--mc-text)]">
+                MetalCalc
+              </span>
+              <span className="hidden rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--mc-text-muted)] sm:inline">
+                CAD + BOM
+              </span>
+            </Link>
+
+            <nav className="hidden items-center gap-5 text-xs font-medium text-[var(--mc-text-muted)] md:flex">
+              <a href="#workflow" className="transition-colors hover:text-[var(--mc-text)]">
+                Как это работает
+              </a>
+              <a href="#features" className="transition-colors hover:text-[var(--mc-text)]">
+                Возможности
+              </a>
+            </nav>
+          </div>
 
           <div className="flex items-center gap-2">
             <div
-              className="flex items-center rounded border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-0.5"
+              className="flex items-center rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-0.5"
               role="group"
               aria-label="Переключатель темы"
             >
@@ -257,7 +276,7 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
                 onClick={() => setTheme("light")}
                 aria-pressed={theme === "light"}
                 title="Светлая тема"
-                className={`rounded p-1 transition-colors ${
+                className={`rounded p-1.5 transition-colors ${
                   theme === "light"
                     ? "bg-[var(--mc-brand)] text-[var(--mc-brand-text)] shadow-xs"
                     : "text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
@@ -270,7 +289,7 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
                 onClick={() => setTheme("dark")}
                 aria-pressed={theme === "dark"}
                 title="Тёмная тема"
-                className={`rounded p-1 transition-colors ${
+                className={`rounded p-1.5 transition-colors ${
                   theme === "dark"
                     ? "bg-[var(--mc-brand)] text-[var(--mc-brand-text)] shadow-xs"
                     : "text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
@@ -284,13 +303,13 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
               <>
                 <Link
                   href="/projects"
-                  className="hidden rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-2.5 py-1.5 text-xs font-medium text-[var(--mc-text)] hover:bg-[var(--mc-bg-hover)] sm:inline-flex"
+                  className="hidden rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-3 py-1.5 text-xs font-medium text-[var(--mc-text)] transition-colors hover:bg-[var(--mc-bg-hover)] sm:inline-flex"
                 >
                   Мои проекты
                 </Link>
                 <Link
                   href="/editor"
-                  className="inline-flex items-center gap-1.5 rounded bg-[var(--mc-brand)] px-3 py-1.5 text-xs font-medium text-[var(--mc-brand-text)] hover:bg-[var(--mc-brand-light)] transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-[var(--mc-brand)] px-3.5 py-1.5 text-xs font-medium text-[var(--mc-brand-text)] transition-colors hover:bg-[var(--mc-brand-light)]"
                 >
                   <span>В редактор</span>
                   <ArrowRight className="h-3.5 w-3.5" />
@@ -301,13 +320,13 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
               <>
                 <Link
                   href="/login?next=%2Feditor"
-                  className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-3 py-1.5 text-xs font-medium text-[var(--mc-text)] hover:bg-[var(--mc-bg-hover)]"
+                  className="rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-3 py-1.5 text-xs font-medium text-[var(--mc-text)] transition-colors hover:bg-[var(--mc-bg-hover)]"
                 >
                   Войти
                 </Link>
                 <Link
                   href="/register?next=%2Feditor"
-                  className="inline-flex items-center gap-1.5 rounded bg-[var(--mc-brand)] px-3 py-1.5 text-xs font-medium text-[var(--mc-brand-text)] hover:bg-[var(--mc-brand-light)] transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-[var(--mc-brand)] px-3.5 py-1.5 text-xs font-medium text-[var(--mc-brand-text)] transition-colors hover:bg-[var(--mc-brand-light)]"
                 >
                   <span>Начать</span>
                   <ArrowRight className="h-3.5 w-3.5" />
@@ -322,27 +341,28 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
         {/* Главный экран (Hero + живой превью-виджет) */}
         <section className="mx-auto max-w-6xl px-4 pb-12 pt-10 sm:px-6 lg:pb-16 lg:pt-16">
           <div className="grid items-center gap-10 lg:grid-cols-12">
-            {/* Левый блок: лаконичный хук */}
+            {/* Левый блок */}
             <div className="space-y-6 lg:col-span-6">
               <div className="inline-flex items-center gap-2 rounded-full border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] px-3 py-1 text-[11px] font-medium text-[var(--mc-brand-inline)]">
                 <Sparkles className="h-3.5 w-3.5" />
-                <span>2D чертёж · 3D модель · Автосмета</span>
+                <span className="font-mono tracking-tight">2D ЧЕРТЁЖ · 3D СЦЕНА · АВТОСМЕТА</span>
               </div>
 
-              <h1 className="text-3xl font-bold leading-[1.12] tracking-tight text-[var(--mc-text)] sm:text-5xl">
+              <h1 className="text-3xl font-bold leading-[1.1] tracking-tight text-[var(--mc-text)] sm:text-5xl">
                 Начертите каркас.{" "}
                 <span className="text-[var(--mc-brand-inline)]">Смету посчитает сам.</span>
               </h1>
 
               <p className="max-w-lg text-sm leading-relaxed text-[var(--mc-text-secondary)] sm:text-base">
-                Быстрое проектирование конструкций из профильной трубы прямо в браузере — от
-                трёхмерного эскиза до готовых PDF и Excel для цеха и клиента.
+                Браузерная САПР-система для проектирования конструкций из профильной трубы:
+                ортогональные виды, объёмная сцена с подрезкой торцов и мгновенный расчёт в PDF и
+                Excel.
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-1">
                 <Link
                   href={activeUser ? "/editor" : "/register?next=%2Feditor"}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[var(--mc-brand)] px-5 py-3 text-sm font-medium text-[var(--mc-brand-text)] shadow-sm transition-all hover:bg-[var(--mc-brand-light)]"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[var(--mc-brand)] px-5 py-3 text-sm font-medium text-[var(--mc-brand-text)] shadow-sm transition-colors hover:bg-[var(--mc-brand-light)]"
                 >
                   <span>{activeUser ? "Открыть холст" : "Попробовать бесплатно"}</span>
                   <ArrowRight className="h-4 w-4" />
@@ -350,126 +370,169 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
 
                 <Link
                   href={activeUser ? "/projects" : "/login?next=%2Feditor"}
-                  className="inline-flex items-center gap-2 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] px-5 py-3 text-sm font-medium text-[var(--mc-text)] transition-colors hover:bg-[var(--mc-bg-hover)]"
+                  className="inline-flex items-center gap-2 rounded-lg border border-[var(--mc-border-strong)] bg-[var(--mc-bg-panel)] px-5 py-3 text-sm font-medium text-[var(--mc-text)] transition-colors hover:bg-[var(--mc-bg-hover)]"
                 >
-                  <span>{activeUser ? "Мои проекты" : "Войти"}</span>
+                  <span>{activeUser ? "Мои проекты" : "Войти в аккаунт"}</span>
                 </Link>
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-2 text-xs text-[var(--mc-text-muted)]">
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--mc-brand-light)]" />
-                  Точность до 1 мм
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--mc-brand-light)]" />
-                  Реальные 3D-длины
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--mc-brand-light)]" />
-                  Выгрузка в PDF и Excel
-                </span>
+              <div className="grid grid-cols-3 gap-3 border-t border-[var(--mc-border)] pt-5">
+                <div>
+                  <div className="font-mono text-sm font-semibold text-[var(--mc-text)]">±1 мм</div>
+                  <div className="mt-0.5 text-[11px] text-[var(--mc-text-muted)]">Точность сетки и привязок</div>
+                </div>
+                <div>
+                  <div className="font-mono text-sm font-semibold text-[var(--mc-text)]">XY · XZ · YZ</div>
+                  <div className="mt-0.5 text-[11px] text-[var(--mc-text-muted)]">3D-длины раскосов</div>
+                </div>
+                <div>
+                  <div className="font-mono text-sm font-semibold text-[var(--mc-text)]">PDF + XLSX</div>
+                  <div className="mt-0.5 text-[11px] text-[var(--mc-text-muted)]">Готово для цеха</div>
+                </div>
               </div>
             </div>
 
             {/* Правый блок: интерактивная демонстрация расчёта */}
             <div className="lg:col-span-6">
-              <div className="rounded-2xl border border-[var(--mc-border-strong)] bg-[var(--mc-bg-panel)] p-3.5 shadow-xl">
-                {/* Переключатель примеров */}
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--mc-border)] pb-3">
-                  <div className="flex items-center gap-1 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-0.5">
-                    {DEMO_PRESETS.map((preset) => {
-                      const active = preset.id === activePreset.id;
-                      return (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          onClick={() => setActivePresetId(preset.id)}
-                          className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                            active
-                              ? "bg-[var(--mc-brand)] text-[var(--mc-brand-text)] shadow-xs"
-                              : "text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
-                          }`}
-                        >
-                          {preset.label}
-                        </button>
-                      );
-                    })}
+              <div className="overflow-hidden rounded-2xl border border-[var(--mc-border-strong)] bg-[var(--mc-bg-panel)] shadow-2xl">
+                {/* Заголовок окна CAD */}
+                <div className="flex items-center justify-between border-b border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-4 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <Compass className="h-3.5 w-3.5 text-[var(--mc-brand-inline)]" />
+                    <span className="font-mono text-[11px] font-medium text-[var(--mc-text-secondary)]">
+                      {activePreset.code} · Изометрия 3D
+                    </span>
                   </div>
-                  <span className="font-mono text-[11px] text-[var(--mc-text-subtle)]">
+                  <span className="font-mono text-[11px] text-[var(--mc-text-muted)]">
                     {activePreset.size}
                   </span>
                 </div>
 
-                {/* Сетка чертежа + 3D изометрия */}
-                <div className="relative mt-3 h-52 overflow-hidden rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-canvas)] p-3">
-                  <div
-                    className="pointer-events-none absolute inset-0 opacity-35"
-                    style={{
-                      backgroundImage:
-                        "linear-gradient(to right, var(--mc-border) 1px, transparent 1px), linear-gradient(to bottom, var(--mc-border) 1px, transparent 1px)",
-                      backgroundSize: "22px 22px",
-                    }}
-                  />
-
-                  <div className="relative z-10 flex items-center justify-between text-[10px] text-[var(--mc-text-muted)]">
-                    <span className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/90 px-2 py-0.5 font-medium">
-                      3D-модель · X / Y / Z
-                    </span>
-                    <span className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/90 px-2 py-0.5 font-mono">
+                <div className="p-3.5">
+                  {/* Переключатель примеров */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
+                    <div
+                      className="flex items-center gap-1 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-0.5"
+                      role="tablist"
+                      aria-label="Примеры конструкций"
+                    >
+                      {DEMO_PRESETS.map((preset) => {
+                        const active = preset.id === activePreset.id;
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={active}
+                            onClick={() => setActivePresetId(preset.id)}
+                            className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                              active
+                                ? "bg-[var(--mc-brand)] text-[var(--mc-brand-text)] shadow-xs"
+                                : "text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
+                            }`}
+                          >
+                            {preset.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <span className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-app)] px-2 py-1 font-mono text-[10px] text-[var(--mc-text-secondary)]">
                       {activePreset.profile}
                     </span>
                   </div>
 
-                  <div className="relative z-10 h-40">
-                    <IsometricPreviewSvg presetId={activePreset.id} />
-                  </div>
-                </div>
+                  {/* Сетка чертежа + 3D изометрия */}
+                  <div className="relative h-52 overflow-hidden rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-canvas)] p-3">
+                    <div
+                      className="pointer-events-none absolute inset-0 opacity-45"
+                      style={{
+                        backgroundImage:
+                          "linear-gradient(to right, var(--mc-border) 1px, transparent 1px), linear-gradient(to bottom, var(--mc-border) 1px, transparent 1px)",
+                        backgroundSize: "22px 22px",
+                      }}
+                    />
 
-                {/* Живая строка сметы */}
-                <div className="mt-3 rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] p-3">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 text-xs">
-                      <div>
-                        <div className="text-[10px] text-[var(--mc-text-muted)]">Металл</div>
-                        <div className="font-semibold tabular-nums text-[var(--mc-text)]">
-                          {activePreset.length}
+                    <div className="relative z-10 flex items-center justify-between text-[10px] text-[var(--mc-text-muted)]">
+                      <span className="inline-flex items-center gap-1.5 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/90 px-2 py-0.5 font-mono">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                        LIVE PREVIEW
+                      </span>
+                      <span className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/90 px-2 py-0.5 font-mono">
+                        X / Y / Z
+                      </span>
+                    </div>
+
+                    <div className="relative z-10 h-40">
+                      <IsometricPreviewSvg presetId={activePreset.id} />
+                    </div>
+                  </div>
+
+                  {/* Живая строка сметы */}
+                  <div className="mt-3 rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] p-3.5">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4 text-xs">
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-[var(--mc-text-muted)]">
+                            Металл
+                          </div>
+                          <div className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-[var(--mc-text)]">
+                            {activePreset.length}
+                          </div>
+                        </div>
+                        <div className="h-7 w-px bg-[var(--mc-border)]" />
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-[var(--mc-text-muted)]">
+                            Узлы сварки
+                          </div>
+                          <div className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-[var(--mc-text)]">
+                            {activePreset.joints} шт.
+                          </div>
                         </div>
                       </div>
-                      <div className="h-6 w-px bg-[var(--mc-border)]" />
-                      <div>
-                        <div className="text-[10px] text-[var(--mc-text-muted)]">Узлы сварки</div>
-                        <div className="font-semibold tabular-nums text-[var(--mc-text)]">
-                          {activePreset.joints} шт.
+
+                      <div className="text-right">
+                        <div className="text-[10px] uppercase tracking-wider text-[var(--mc-text-muted)]">
+                          Итого смета
+                        </div>
+                        <div className="mt-0.5 font-mono text-lg font-bold tabular-nums text-[var(--mc-brand-inline)]">
+                          {activePreset.cost}
                         </div>
                       </div>
                     </div>
 
-                    <div className="text-right">
-                      <div className="text-[10px] text-[var(--mc-text-muted)]">Итого смета</div>
-                      <div className="text-base font-bold tabular-nums text-[var(--mc-brand-inline)]">
-                        {activePreset.cost}
-                      </div>
+                    {/* Шкала структуры бюджета */}
+                    <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-[var(--mc-border)]">
+                      <div
+                        style={{ width: `${activePreset.metalShare}%` }}
+                        className="bg-amber-500 transition-all duration-300"
+                        title="Металлопрокат"
+                      />
+                      <div
+                        style={{ width: `${activePreset.weldShare}%` }}
+                        className="bg-[var(--mc-brand-light)] transition-all duration-300"
+                        title="Сварка"
+                      />
+                      <div
+                        style={{ width: `${activePreset.paintShare}%` }}
+                        className="bg-sky-400 transition-all duration-300"
+                        title="Покраска"
+                      />
                     </div>
-                  </div>
 
-                  {/* Шкала структуры бюджета */}
-                  <div className="mt-2.5 flex h-1.5 overflow-hidden rounded-full bg-[var(--mc-border)]">
-                    <div
-                      style={{ width: `${activePreset.metalShare}%` }}
-                      className="bg-[#f59e0b] transition-all duration-300"
-                      title="Металлопрокат"
-                    />
-                    <div
-                      style={{ width: `${activePreset.weldShare}%` }}
-                      className="bg-[#9f4636] transition-all duration-300"
-                      title="Сварка"
-                    />
-                    <div
-                      style={{ width: `${activePreset.paintShare}%` }}
-                      className="bg-[#38bdf8] transition-all duration-300"
-                      title="Покраска"
-                    />
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-[var(--mc-text-muted)]">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-xs bg-amber-500" />
+                        Металл {activePreset.metalShare}%
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-xs bg-[var(--mc-brand-light)]" />
+                        Сварка {activePreset.weldShare}%
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-xs bg-sky-400" />
+                        Покраска {activePreset.paintShare}%
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -477,11 +540,51 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
           </div>
         </section>
 
-        {/* Компактный Bento-блок */}
-        <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
+        {/* Процесс работы (3 шага) */}
+        <section id="workflow" className="mx-auto max-w-6xl px-4 pb-10 sm:px-6">
+          <div className="grid gap-3 rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-4 sm:grid-cols-3 sm:gap-4">
+            <div className="flex items-start gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] font-mono text-xs font-semibold text-[var(--mc-brand-inline)]">
+                01
+              </span>
+              <div>
+                <h2 className="text-xs font-semibold text-[var(--mc-text)]">Эскиз в 2D и 3D</h2>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--mc-text-muted)]">
+                  Рисуйте стержни в трёх ортогональных проекциях или на 3D-плоскостях с привязками.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] font-mono text-xs font-semibold text-[var(--mc-brand-inline)]">
+                02
+              </span>
+              <div>
+                <h2 className="text-xs font-semibold text-[var(--mc-text)]">Профили и стыки</h2>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--mc-text-muted)]">
+                  Назначайте трубы из каталога и автоматически определяйте узлы сварки и подрезки.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] font-mono text-xs font-semibold text-[var(--mc-brand-inline)]">
+                03
+              </span>
+              <div>
+                <h2 className="text-xs font-semibold text-[var(--mc-text)]">Спецификация и экспорт</h2>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--mc-text-muted)]">
+                  Получите точную ведомость деталей, чертежи с размерами и смету в PDF и Excel.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Bento-блок возможностей */}
+        <section id="features" className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
           <div className="grid gap-3.5 md:grid-cols-12">
-            {/* Карточка 1 */}
-            <div className="rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-5 md:col-span-5">
+            <div className="rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-5 transition-colors hover:border-[var(--mc-border-strong)] md:col-span-5">
               <div className="flex items-center justify-between">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] text-[var(--mc-brand-inline)]">
                   <Layers className="h-4 w-4" />
@@ -493,14 +596,13 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
               <h2 className="mt-4 text-sm font-semibold text-[var(--mc-text)]">
                 Три проекции на одном экране
               </h2>
-              <p className="mt-1 text-xs leading-relaxed text-[var(--mc-text-muted)]">
-                Вид сверху, спереди и сбоку с расчётом реальной пространственной длины каждого
-                раскоса.
+              <p className="mt-1.5 text-xs leading-relaxed text-[var(--mc-text-muted)]">
+                Вид сверху, спереди и сбоку синхронизированы в реальном времени с расчётом
+                истинной пространственной длины каждого раскоса.
               </p>
             </div>
 
-            {/* Карточка 2 */}
-            <div className="rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-5 md:col-span-4">
+            <div className="rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-5 transition-colors hover:border-[var(--mc-border-strong)] md:col-span-4">
               <div className="flex items-center justify-between">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] text-[var(--mc-brand-inline)]">
                   <Box className="h-4 w-4" />
@@ -512,13 +614,12 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
               <h2 className="mt-4 text-sm font-semibold text-[var(--mc-text)]">
                 Объём и стыковка торцов
               </h2>
-              <p className="mt-1 text-xs leading-relaxed text-[var(--mc-text-muted)]">
-                Полые профильные трубы, вращение камеры и правка координат по всем трём осям.
+              <p className="mt-1.5 text-xs leading-relaxed text-[var(--mc-text-muted)]">
+                Полые профильные трубы, подрезка под 45° и встык, 3D-манипулятор осей X / Y / Z.
               </p>
             </div>
 
-            {/* Карточка 3 */}
-            <div className="rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-5 md:col-span-3">
+            <div className="rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-5 transition-colors hover:border-[var(--mc-border-strong)] md:col-span-3">
               <div className="flex items-center justify-between">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] text-[var(--mc-brand-inline)]">
                   <Calculator className="h-4 w-4" />
@@ -530,27 +631,33 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
               <h2 className="mt-4 text-sm font-semibold text-[var(--mc-text)]">
                 Смета на лету
               </h2>
-              <p className="mt-1 text-xs leading-relaxed text-[var(--mc-text-muted)]">
+              <p className="mt-1.5 text-xs leading-relaxed text-[var(--mc-text-muted)]">
                 Автоподсчёт металла, швов и покраски по вашим тарифам.
               </p>
             </div>
 
-            {/* Карточка 4: Экспорт + CTA */}
+            {/* Экспорт + CTA */}
             <div className="flex flex-col justify-between gap-4 rounded-xl border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] p-5 sm:flex-row sm:items-center md:col-span-12">
               <div className="flex items-start gap-3.5">
                 <div className="flex items-center gap-1.5 pt-0.5">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] text-[var(--mc-success-text)]">
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] text-[var(--mc-success-text)]">
                     <FileSpreadsheet className="h-4 w-4" />
                   </span>
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] text-[var(--mc-brand-inline)]">
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] text-[var(--mc-brand-inline)]">
                     <FileText className="h-4 w-4" />
                   </span>
                 </div>
                 <div>
-                  <h2 className="text-sm font-semibold text-[var(--mc-text)]">
-                    Готовая спецификация в PDF и Excel в один клик
-                  </h2>
-                  <p className="mt-0.5 text-xs text-[var(--mc-text-secondary)]">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-sm font-semibold text-[var(--mc-text)]">
+                      Готовая спецификация в PDF и Excel в один клик
+                    </h2>
+                    <span className="inline-flex items-center gap-1 rounded border border-[var(--mc-success-border)] bg-[var(--mc-success-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--mc-success-text)]">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Кириллица и 3 проекции
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--mc-text-secondary)]">
                     Ведомость деталей, чертежи с трёх сторон и итоговый расчёт для заказчика или
                     производства.
                   </p>
@@ -559,8 +666,9 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
 
               <Link
                 href={activeUser ? "/editor" : "/register?next=%2Feditor"}
-                className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[var(--mc-brand)] px-4 py-2.5 text-xs font-medium text-[var(--mc-brand-text)] shadow-xs transition-colors hover:bg-[var(--mc-brand-light)]"
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[var(--mc-brand)] px-4 py-2.5 text-xs font-medium text-[var(--mc-brand-text)] shadow-xs transition-colors hover:bg-[var(--mc-brand-light)]"
               >
+                <Ruler className="h-3.5 w-3.5" />
                 <span>{activeUser ? "Перейти в редактор" : "Начать проект"}</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
@@ -571,17 +679,25 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
 
       <footer className="border-t border-[var(--mc-border)] bg-[var(--mc-bg-panel)] py-5 text-xs text-[var(--mc-text-subtle)]">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 sm:px-6">
-          <span>
-            <strong className="font-semibold text-[var(--mc-text)]">MetalCalc</strong> · Проектирование и смета металлоконструкций
-          </span>
-          <div className="flex items-center gap-4">
-            <Link href="/editor" className="hover:text-[var(--mc-text)]">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-[var(--mc-brand)] font-mono text-[10px] font-bold text-[var(--mc-brand-text)]">
+              MC
+            </span>
+            <span>
+              <strong className="font-semibold text-[var(--mc-text)]">MetalCalc</strong> · Проектирование и смета металлоконструкций
+            </span>
+          </div>
+          <div className="flex items-center gap-5">
+            <Link href="/editor" className="transition-colors hover:text-[var(--mc-text)]">
               Редактор
             </Link>
-            <Link href="/projects" className="hover:text-[var(--mc-text)]">
+            <Link href="/projects" className="transition-colors hover:text-[var(--mc-text)]">
               Проекты
             </Link>
-            <Link href="/login?next=%2Feditor" className="hover:text-[var(--mc-text)]">
+            <Link href="/settings" className="transition-colors hover:text-[var(--mc-text)]">
+              Настройки
+            </Link>
+            <Link href="/login?next=%2Feditor" className="transition-colors hover:text-[var(--mc-text)]">
               Вход
             </Link>
           </div>

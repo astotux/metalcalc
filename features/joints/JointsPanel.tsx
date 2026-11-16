@@ -42,7 +42,7 @@ export function JointsPanel() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <GitCommitHorizontal className="h-3.5 w-3.5 text-[var(--mc-warning-text)]" />
-          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-text-muted)]">
+          <h2 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mc-text-muted)]">
             Соединения ({project.joints.length})
           </h2>
         </div>
@@ -62,7 +62,7 @@ export function JointsPanel() {
         <button
           type="button"
           onClick={() => detectAndSyncJoints()}
-          className="inline-flex items-center justify-center gap-1.5 rounded border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] px-2 py-1.5 text-[11px] font-medium text-[var(--mc-brand-inline)] hover:bg-[var(--mc-brand)] hover:text-[var(--mc-brand-text)]"
+          className="inline-flex items-center justify-center gap-1.5 rounded-md border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] px-2 py-1.5 text-[11px] font-medium text-[var(--mc-brand-inline)] transition-colors hover:bg-[var(--mc-brand)] hover:text-[var(--mc-brand-text)]"
           title="Найти угловые, Т-образные и нахлёстные стыки по текущей геометрии"
         >
           <Crosshair className="h-3.5 w-3.5" />
@@ -72,7 +72,7 @@ export function JointsPanel() {
         <button
           type="button"
           onClick={handleAddManual}
-          className="inline-flex items-center justify-center gap-1.5 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-2 py-1.5 text-[11px] text-[var(--mc-text)] hover:bg-[var(--mc-bg-hover)]"
+          className="inline-flex items-center justify-center gap-1.5 rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-2 py-1.5 text-[11px] font-medium text-[var(--mc-text)] transition-colors hover:bg-[var(--mc-bg-hover)]"
         >
           <Plus className="h-3.5 w-3.5" />
           Добавить узел
@@ -83,7 +83,7 @@ export function JointsPanel() {
         <button
           type="button"
           onClick={() => estimateAllWeldLengthsByPerimeter()}
-          className="flex w-full items-center justify-center gap-1.5 rounded border border-amber-500/35 bg-amber-500/10 px-2 py-1.5 text-[11px] text-[var(--mc-warning-text)] hover:bg-amber-500/20"
+          className="flex w-full items-center justify-center gap-1.5 rounded-md border border-[var(--mc-warning-border)] bg-[var(--mc-warning-soft)] px-2 py-1.5 text-[11px] font-medium text-[var(--mc-warning-text)] transition-colors hover:opacity-85"
           title="Заполнить пустые длины швов как периметр сечения профиля 2×(Ш+В)"
         >
           <Ruler className="h-3.5 w-3.5" />
@@ -92,7 +92,7 @@ export function JointsPanel() {
       )}
 
       {project.joints.length === 0 ? (
-        <div className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-4 text-center text-xs text-[var(--mc-text-subtle)]">
+        <div className="rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-4 text-center text-xs text-[var(--mc-text-subtle)]">
           Узлы соединений не добавлены. Нажмите «Найти стыки» после построения конструкции.
         </div>
       ) : (
@@ -102,7 +102,7 @@ export function JointsPanel() {
             return (
               <div
                 key={joint.id}
-                className={`flex items-center justify-between gap-2 rounded border px-2.5 py-2 text-xs transition-colors ${
+                className={`flex items-center justify-between gap-2 rounded-md border px-2.5 py-2 text-xs transition-colors ${
                   isSelected
                     ? "border-[var(--mc-brand-light)] bg-[var(--mc-brand-soft)]"
                     : "border-[var(--mc-border)] bg-[var(--mc-bg-app)] hover:border-[var(--mc-border-strong)]"
@@ -111,7 +111,7 @@ export function JointsPanel() {
                 <button
                   type="button"
                   onClick={() => selectJoint(joint.id)}
-                  className="flex-1 min-w-0 text-left"
+                  className="min-w-0 flex-1 text-left"
                 >
                   <div className="flex items-center gap-1.5">
                     <span className="h-2 w-2 shrink-0 rounded-full bg-amber-400" />
@@ -119,7 +119,7 @@ export function JointsPanel() {
                       {JOINT_TYPE_LABELS[joint.type]}
                     </span>
                   </div>
-                  <div className="mt-0.5 text-[10px] text-[var(--mc-text-muted)] tabular-nums">
+                  <div className="mt-0.5 font-mono text-[10px] tabular-nums text-[var(--mc-text-muted)]">
                     ({joint.position.x}, {joint.position.y}) мм · Шов:{" "}
                     {joint.weldLengthMm !== null ? `${joint.weldLengthMm} мм` : "не задан"}
                   </div>
@@ -128,8 +128,9 @@ export function JointsPanel() {
                 <button
                   type="button"
                   onClick={() => deleteJoint(joint.id)}
-                  className="rounded p-1 text-[var(--mc-text-subtle)] hover:bg-rose-500/15 hover:text-[var(--mc-danger-text)]"
+                  className="rounded p-1 text-[var(--mc-text-subtle)] transition-colors hover:bg-[var(--mc-danger-soft)] hover:text-[var(--mc-danger-text)]"
                   title="Удалить соединение"
+                  aria-label="Удалить соединение"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -159,20 +160,20 @@ export function SelectedJointInspector({ joint }: SelectedJointInspectorProps) {
   );
 
   return (
-    <aside className="flex h-full w-full flex-col bg-[var(--mc-bg-panel)] overflow-y-auto">
+    <aside className="flex h-full w-full flex-col overflow-y-auto bg-[var(--mc-bg-panel)]">
       <div className="flex items-center justify-between border-b border-[var(--mc-border)] px-3 py-2.5">
         <div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-warning-text)]">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mc-warning-text)]">
             Узел соединения
           </div>
-          <div className="mt-0.5 text-xs text-[var(--mc-text-subtle)]">
+          <div className="mt-0.5 font-mono text-[11px] text-[var(--mc-text-subtle)]">
             ({joint.position.x}, {joint.position.y}, {joint.position.z}) мм
           </div>
         </div>
         <button
           type="button"
           onClick={() => selectJoint(null)}
-          className="rounded px-2 py-1 text-[11px] text-[var(--mc-text-muted)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
+          className="rounded-md px-2 py-1 text-[11px] font-medium text-[var(--mc-text-muted)] transition-colors hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
         >
           Назад
         </button>
@@ -186,7 +187,7 @@ export function SelectedJointInspector({ joint }: SelectedJointInspectorProps) {
             onChange={(e) =>
               updateJoint(joint.id, { type: e.target.value as JointType })
             }
-            className="mt-1 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2 py-1.5 text-xs text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
+            className="mt-1 w-full rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2 py-1.5 text-xs text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
           >
             {(Object.keys(JOINT_TYPE_LABELS) as JointType[]).map((type) => (
               <option key={type} value={type}>
@@ -205,7 +206,7 @@ export function SelectedJointInspector({ joint }: SelectedJointInspectorProps) {
                 trimMode: e.target.value as JointTrimMode,
               })
             }
-            className="mt-1 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2 py-1.5 text-xs text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
+            className="mt-1 w-full rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2 py-1.5 text-xs text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
           >
             {TRIM_MODE_OPTIONS.map((opt) => (
               <option key={opt.id} value={opt.id}>
@@ -232,7 +233,7 @@ export function SelectedJointInspector({ joint }: SelectedJointInspectorProps) {
                       key={elId}
                       type="button"
                       onClick={() => updateJoint(joint.id, { primaryElementId: elId })}
-                      className={`flex items-center justify-between rounded border px-2 py-1.5 text-left text-[11px] transition-colors ${
+                      className={`flex items-center justify-between rounded-md border px-2 py-1.5 text-left text-[11px] transition-colors ${
                         isPrimary
                           ? "border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] text-[var(--mc-text)]"
                           : "border-[var(--mc-border)] bg-[var(--mc-bg-app)] text-[var(--mc-text-muted)] hover:text-[var(--mc-text)]"
@@ -274,13 +275,13 @@ export function SelectedJointInspector({ joint }: SelectedJointInspectorProps) {
                     updateJoint(joint.id, { weldLengthMm: num });
                   }
                 }}
-                className="w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2.5 py-1.5 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
+                className="w-full rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2.5 py-1.5 font-mono text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
               />
               {estimatedMm !== null && (
                 <button
                   type="button"
                   onClick={() => updateJoint(joint.id, { weldLengthMm: estimatedMm })}
-                  className="shrink-0 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-2 py-1.5 text-[11px] text-[var(--mc-text)] hover:bg-[var(--mc-bg-hover)]"
+                  className="shrink-0 rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-2 py-1.5 font-mono text-[11px] text-[var(--mc-text)] transition-colors hover:bg-[var(--mc-bg-hover)]"
                   title="Подставить периметр меньшего профиля 2×(Ш+В)"
                 >
                   ~{estimatedMm} мм
@@ -308,7 +309,7 @@ export function SelectedJointInspector({ joint }: SelectedJointInspectorProps) {
                 cutAngleDeg: val === "" ? undefined : Number(val),
               });
             }}
-            className="mt-1 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2.5 py-1.5 text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
+            className="mt-1 w-full rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2.5 py-1.5 font-mono text-xs tabular-nums text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
           />
         </label>
 
@@ -321,18 +322,19 @@ export function SelectedJointInspector({ joint }: SelectedJointInspectorProps) {
               updateJoint(joint.id, { processingNotes: e.target.value })
             }
             placeholder="Зачистка шва, провар с 4 сторон..."
-            className="mt-1 w-full rounded border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2.5 py-1.5 text-xs text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
+            className="mt-1 w-full rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-2.5 py-1.5 text-xs text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-light)]"
           />
         </label>
 
-        <div className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-2.5 text-[11px] text-[var(--mc-text-muted)]">
-          Связано элементов: <strong className="text-[var(--mc-text)]">{joint.elementIds.length}</strong>
+        <div className="rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-2.5 text-[11px] text-[var(--mc-text-muted)]">
+          Связано элементов:{" "}
+          <strong className="font-mono text-[var(--mc-text)]">{joint.elementIds.length}</strong>
         </div>
 
         <button
           type="button"
           onClick={() => deleteJoint(joint.id)}
-          className="inline-flex w-full items-center justify-center gap-1.5 rounded border border-rose-500/40 bg-rose-500/10 py-1.5 text-xs text-[var(--mc-danger-text)] hover:bg-rose-500/20"
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-[var(--mc-danger-border)] bg-[var(--mc-danger-soft)] py-1.5 text-xs font-medium text-[var(--mc-danger-text)] transition-colors hover:opacity-85"
         >
           <Trash2 className="h-3.5 w-3.5" />
           Удалить соединение

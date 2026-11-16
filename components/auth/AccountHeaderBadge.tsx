@@ -40,7 +40,7 @@ export function AccountHeaderBadge() {
 
   if (!initialized) {
     return (
-      <div className="h-7 w-16 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] opacity-50" />
+      <div className="h-7 w-16 animate-pulse rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)]" />
     );
   }
 
@@ -48,7 +48,7 @@ export function AccountHeaderBadge() {
     return (
       <Link
         href="/login"
-        className="inline-flex items-center gap-1.5 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-2.5 py-1.5 text-xs font-medium text-[var(--mc-text)] transition-colors hover:bg-[var(--mc-bg-hover)]"
+        className="inline-flex items-center gap-1.5 rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-2.5 py-1.5 text-xs font-medium text-[var(--mc-text)] transition-colors hover:bg-[var(--mc-bg-hover)]"
         title="Войти или зарегистрироваться"
       >
         <LogIn className="h-3.5 w-3.5 text-[var(--mc-brand-inline)]" />
@@ -60,15 +60,15 @@ export function AccountHeaderBadge() {
   const initial = (user.name || user.email || "U").trim().charAt(0).toUpperCase();
 
   return (
-    <div className="inline-flex items-center gap-1 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] pl-1.5 pr-1 py-0.5 text-xs">
+    <div className="inline-flex items-center gap-1.5 rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] py-0.5 pl-1.5 pr-1 text-xs">
       <div
-        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--mc-brand)] text-[10px] font-semibold text-[var(--mc-brand-text)]"
+        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--mc-brand)] font-mono text-[10px] font-semibold text-[var(--mc-brand-text)]"
         title={`${user.name} (${user.email})`}
       >
         {initial}
       </div>
       <span
-        className="hidden max-w-[96px] truncate text-[var(--mc-text)] xl:inline"
+        className="hidden max-w-[104px] truncate font-medium text-[var(--mc-text)] xl:inline"
         title={`${user.name} — ${user.email}`}
       >
         {user.name}

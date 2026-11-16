@@ -110,14 +110,15 @@ export function VerificationCodeStep({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="flex items-start gap-2.5 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] p-3 text-xs">
+      <div className="flex items-start gap-2.5 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] p-3.5 text-xs">
         <Mail className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mc-brand-inline)]" />
         <div className="space-y-1">
           <p className="font-medium text-[var(--mc-text)]">
             Код отправлен на {email}
           </p>
-          <p className="text-[11px] text-[var(--mc-text-muted)]">
-            Введите 6-значный код подтверждения. Код действует 10 минут. Не забудьтепроверить вкладку "Спам"
+          <p className="text-[11px] leading-relaxed text-[var(--mc-text-muted)]">
+            Введите 6-значный код подтверждения. Код действует 10 минут. Не забудьте проверить
+            папку «Спам».
           </p>
         </div>
       </div>
@@ -135,7 +136,7 @@ export function VerificationCodeStep({
           <button
             type="button"
             onClick={() => setCode(devPreviewCode)}
-            className="rounded border border-[var(--mc-brand-border)] px-2 py-0.5 text-[11px] font-medium text-[var(--mc-brand-inline)] hover:bg-[var(--mc-bg-hover)]"
+            className="rounded border border-[var(--mc-brand-border)] bg-[var(--mc-bg-panel)] px-2.5 py-1 text-[11px] font-medium text-[var(--mc-brand-inline)] transition-colors hover:bg-[var(--mc-bg-hover)]"
           >
             Вставить
           </button>
@@ -143,20 +144,26 @@ export function VerificationCodeStep({
       )}
 
       {error && (
-        <div className="flex items-start gap-2 rounded-lg border border-[var(--mc-danger-border)] bg-[var(--mc-danger-soft)] px-3 py-2 text-xs text-[var(--mc-danger-text)]">
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-lg border border-[var(--mc-danger-border)] bg-[var(--mc-danger-soft)] px-3 py-2.5 text-xs text-[var(--mc-danger-text)]"
+        >
           <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {infoMessage && (
-        <div className="flex items-start gap-2 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-3 py-2 text-xs text-[var(--mc-success-text)]">
+        <div
+          role="status"
+          className="flex items-start gap-2 rounded-lg border border-[var(--mc-success-border)] bg-[var(--mc-success-soft)] px-3 py-2.5 text-xs text-[var(--mc-success-text)]"
+        >
           <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>{infoMessage}</span>
         </div>
       )}
 
-      <label className="block text-xs text-[var(--mc-text-muted)]">
+      <label className="block text-xs font-medium text-[var(--mc-text-secondary)]">
         Код подтверждения из письма
         <input
           type="text"
@@ -167,25 +174,25 @@ export function VerificationCodeStep({
           onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
           placeholder="000000"
           autoFocus
-          className="mt-1.5 w-full rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-input)] px-3 py-2.5 text-center font-mono text-lg font-semibold tracking-[0.45em] text-[var(--mc-text)] outline-none focus:border-[var(--mc-brand-border)]"
+          className="mt-1.5 w-full rounded-lg border border-[var(--mc-border-strong)] bg-[var(--mc-bg-input)] px-3 py-3 text-center font-mono text-xl font-semibold tracking-[0.45em] text-[var(--mc-text)] outline-none transition-colors focus:border-[var(--mc-brand-light)]"
         />
       </label>
 
       <button
         type="submit"
         disabled={submitting || code.length !== 6}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--mc-brand)] px-4 py-2.5 text-xs font-medium text-[var(--mc-brand-text)] transition-colors hover:bg-[var(--mc-brand-light)] disabled:opacity-60"
+        className="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-lg bg-[var(--mc-brand)] px-4 py-2.5 text-xs font-semibold text-[var(--mc-brand-text)] transition-colors hover:bg-[var(--mc-brand-light)] disabled:opacity-60"
       >
         {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
         <span>Подтвердить почту и войти</span>
       </button>
 
-      <div className="flex items-center justify-between text-[11px]">
+      <div className="flex items-center justify-between pt-1 text-[11px]">
         <button
           type="button"
           onClick={() => void handleResend()}
           disabled={cooldown > 0 || resending}
-          className="inline-flex items-center gap-1 text-[var(--mc-text-secondary)] hover:text-[var(--mc-text)] disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 text-[var(--mc-text-secondary)] transition-colors hover:text-[var(--mc-text)] disabled:opacity-50"
         >
           <RefreshCw className={`h-3 w-3 ${resending ? "animate-spin" : ""}`} />
           {cooldown > 0
@@ -197,7 +204,7 @@ export function VerificationCodeStep({
           <button
             type="button"
             onClick={onChangeEmail}
-            className="text-[var(--mc-text-muted)] underline-offset-2 hover:text-[var(--mc-text)] hover:underline"
+            className="text-[var(--mc-text-muted)] underline-offset-2 transition-colors hover:text-[var(--mc-text)] hover:underline"
           >
             Изменить email
           </button>

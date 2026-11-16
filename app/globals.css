@@ -1,56 +1,71 @@
 @import "tailwindcss";
 
+@theme inline {
+  --font-sans: var(--font-ibm-plex-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
 :root,
 html[data-theme="dark"] {
-  --mc-bg-app: #121013;
-  --mc-bg-canvas: #0d0c0e;
-  --mc-bg-panel: #18151a;
-  --mc-bg-elevated: #231d25;
-  --mc-bg-hover: #2d242e;
-  --mc-bg-input: #100e12;
-  --mc-border: #332830;
-  --mc-border-strong: #4d3b46;
-  --mc-text: #f5ede6;
-  --mc-text-secondary: #dfd1c6;
-  --mc-text-muted: #b29e93;
-  --mc-text-subtle: #867369;
-  --mc-brand: #6c2d2c;
-  --mc-brand-light: #9f4636;
+  --mc-bg-app: #0b0d12;
+  --mc-bg-canvas: #080a0e;
+  --mc-bg-panel: #12151c;
+  --mc-bg-elevated: #191d26;
+  --mc-bg-hover: #222733;
+  --mc-bg-input: #0e1016;
+  --mc-border: #252a36;
+  --mc-border-strong: #363e4f;
+  --mc-text: #f3f4f6;
+  --mc-text-secondary: #cbd2de;
+  --mc-text-muted: #949eb0;
+  --mc-text-subtle: #768196;
+  --mc-brand: #b54834;
+  --mc-brand-light: #cb5843;
   --mc-brand-text: #ffffff;
-  --mc-brand-soft: rgba(159, 70, 54, 0.22);
-  --mc-brand-border: rgba(159, 70, 54, 0.62);
-  --mc-brand-inline: #e29a8a;
+  --mc-brand-soft: rgba(181, 72, 52, 0.16);
+  --mc-brand-border: rgba(203, 88, 67, 0.5);
+  --mc-brand-inline: #f09a86;
+  --mc-ring: #e06d56;
   --mc-danger-text: #fda4af;
   --mc-danger-soft: rgba(244, 63, 94, 0.14);
   --mc-danger-border: rgba(251, 113, 133, 0.45);
-  --mc-success-text: #86efac;
+  --mc-success-text: #6ee7b7;
+  --mc-success-soft: rgba(16, 185, 129, 0.12);
+  --mc-success-border: rgba(52, 211, 153, 0.35);
   --mc-warning-text: #fcd34d;
+  --mc-warning-soft: rgba(245, 158, 11, 0.12);
+  --mc-warning-border: rgba(251, 191, 36, 0.35);
 }
 
 html[data-theme="light"] {
-  --mc-bg-app: #f5f5f6;
-  --mc-bg-canvas: #fafafa;
+  --mc-bg-app: #f4f5f7;
+  --mc-bg-canvas: #fafbfc;
   --mc-bg-panel: #ffffff;
-  --mc-bg-elevated: #f3f2f3;
-  --mc-bg-hover: #ebe8ea;
+  --mc-bg-elevated: #f0f2f5;
+  --mc-bg-hover: #e5e8ee;
   --mc-bg-input: #ffffff;
-  --mc-border: #e2dce0;
-  --mc-border-strong: #c9bfc5;
-  --mc-text: #291e24;
-  --mc-text-secondary: #42313a;
-  --mc-text-muted: #6c5862;
-  --mc-text-subtle: #8e7b84;
-  --mc-brand: #6c2d2c;
-  --mc-brand-light: #9f4636;
+  --mc-border: #dfe3ea;
+  --mc-border-strong: #c4cbd6;
+  --mc-text: #111827;
+  --mc-text-secondary: #374151;
+  --mc-text-muted: #525d70;
+  --mc-text-subtle: #667285;
+  --mc-brand: #a33b28;
+  --mc-brand-light: #b84732;
   --mc-brand-text: #ffffff;
-  --mc-brand-soft: rgba(108, 45, 44, 0.1);
-  --mc-brand-border: rgba(159, 70, 54, 0.45);
-  --mc-brand-inline: #6c2d2c;
+  --mc-brand-soft: rgba(163, 59, 40, 0.09);
+  --mc-brand-border: rgba(163, 59, 40, 0.38);
+  --mc-brand-inline: #943220;
+  --mc-ring: #a33b28;
   --mc-danger-text: #be123c;
   --mc-danger-soft: rgba(225, 29, 72, 0.08);
   --mc-danger-border: rgba(225, 29, 72, 0.35);
   --mc-success-text: #15803d;
+  --mc-success-soft: rgba(21, 128, 61, 0.09);
+  --mc-success-border: rgba(21, 128, 61, 0.3);
   --mc-warning-text: #b45309;
+  --mc-warning-soft: rgba(217, 119, 6, 0.09);
+  --mc-warning-border: rgba(217, 119, 6, 0.32);
 }
 
 * {
@@ -63,12 +78,32 @@ body {
   padding: 0;
   background-color: var(--mc-bg-app);
   color: var(--mc-text);
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   transition: background-color 150ms ease, color 150ms ease;
 }
 
-/* Тонкие скроллбары в цветах фирменной темы */
+button:not(:disabled),
+a[href],
+select:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--mc-ring);
+  outline-offset: 2px;
+}
+
+/* Инженерная сетка для карточек и фонов */
+.mc-blueprint-grid {
+  background-image:
+    linear-gradient(to right, var(--mc-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--mc-border) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Тонкие скроллбары в цветах темы */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -85,4 +120,15 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--mc-brand-light);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
