@@ -220,6 +220,16 @@ function LoginFormContent() {
           Зарегистрироваться
         </Link>
       </p>
+
+      <p className="text-center text-[11px] text-[var(--mc-text-subtle)]">
+        <Link href="/terms" className="hover:text-[var(--mc-text-muted)] hover:underline">
+          Пользовательское соглашение
+        </Link>{" "}
+        ·{" "}
+        <Link href="/privacy" className="hover:text-[var(--mc-text-muted)] hover:underline">
+          Политика 152-ФЗ
+        </Link>
+      </p>
     </AuthShell>
   );
 }

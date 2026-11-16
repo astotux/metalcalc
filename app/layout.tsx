@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, JetBrains_Mono } from "next/font/google";
+import { CookieBanner } from "@/components/common/CookieBanner";
 import { ThemeSync } from "@/components/common/ThemeSync";
 import "./globals.css";
 
@@ -53,6 +54,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-[var(--mc-bg-app)] font-sans text-[var(--mc-text)] antialiased selection:bg-[var(--mc-brand)]/35 selection:text-[var(--mc-text)]">
         <ThemeSync />
         {children}
+        <CookieBanner />
       </body>
     </html>
   );

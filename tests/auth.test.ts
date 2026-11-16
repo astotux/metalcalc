@@ -77,6 +77,22 @@ describe("MetalCalc Auth (SQLite, Email Code, Password Strength, OAuth)", () => 
     );
     expect(weakRes.status).toBe(400);
 
+    // 1b. Отказ от согласия с соглашением / ПДн отклоняется
+    const noConsentRes = await registerRoute(
+      new Request("http://localhost:3000/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Иван Петров",
+          email: "ivan@example.com",
+          password: "MetalCalc!2026",
+          acceptedTerms: false,
+          acceptedPrivacy: false,
+        }),
+      })
+    );
+    expect(noConsentRes.status).toBe(400);
+
     // 2. Успешная регистрация и генерация 6-значного кода
     const regRes = await registerRoute(
       new Request("http://localhost:3000/api/auth/register", {

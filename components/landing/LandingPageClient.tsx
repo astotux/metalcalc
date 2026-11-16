@@ -7,13 +7,20 @@ import {
   Box,
   Calculator,
   CheckCircle2,
+  ChevronDown,
   Compass,
+  Crosshair,
   FileSpreadsheet,
   FileText,
+  GitCommitHorizontal,
+  Grid3x3,
   Layers,
   Moon,
+  Paintbrush,
   Ruler,
-  Sparkles,
+  Scissors,
+  ShieldCheck,
+  SlidersHorizontal,
   Sun,
 } from "lucide-react";
 import { AccountHeaderBadge } from "@/components/auth/AccountHeaderBadge";
@@ -30,7 +37,6 @@ type DemoPresetId = "canopy" | "truss" | "frame";
 interface DemoPreset {
   id: DemoPresetId;
   label: string;
-  code: string;
   size: string;
   length: string;
   joints: number;
@@ -45,7 +51,6 @@ const DEMO_PRESETS: DemoPreset[] = [
   {
     id: "canopy",
     label: "Навес 6×4",
-    code: "PRJ-01",
     size: "6 000 × 4 000 × 2 600 мм",
     length: "54.6 м",
     joints: 16,
@@ -58,7 +63,6 @@ const DEMO_PRESETS: DemoPreset[] = [
   {
     id: "truss",
     label: "Ферма 6 м",
-    code: "PRJ-02",
     size: "6 000 × 750 мм",
     length: "28.4 м",
     joints: 12,
@@ -71,7 +75,6 @@ const DEMO_PRESETS: DemoPreset[] = [
   {
     id: "frame",
     label: "Стеллаж цех",
-    code: "PRJ-03",
     size: "2 400 × 800 × 2 100 мм",
     length: "32.0 м",
     joints: 20,
@@ -80,6 +83,48 @@ const DEMO_PRESETS: DemoPreset[] = [
     metalShare: 64,
     weldShare: 22,
     paintShare: 14,
+  },
+];
+
+const JOINT_MODES = [
+  {
+    title: "Запил на ус (под углом)",
+    description:
+      "Две трубы сходятся в углу рамы или фермы. Оба торца автоматически подрезаются под половину угла на чертеже и в 3D.",
+  },
+  {
+    title: "Встык (Т-примыкание)",
+    description:
+      "Одна труба идёт насквозь, вторая упирается точно в её стенку. Сквозную трубу можно выбрать в свойствах узла.",
+  },
+  {
+    title: "Оценка сварного шва",
+    description:
+      "Не обязательно мерить каждый шов вручную — длина шва подставляется по периметру меньшей из стыкуемых труб.",
+  },
+  {
+    title: "Прямой рез без подрезки",
+    description:
+      "Для нахлёста или конструкций, где заготовки пилятся под 90° и прикладываются друг к другу без косых срезов.",
+  },
+];
+
+const FAQ_ITEMS = [
+  {
+    q: "В каких единицах работает чертёж и как считается длина наклонных деталей?",
+    a: "Черчение идёт в миллиметрах, а итоговый расход в смете переводится в погонные метры. Длина каждого раскоса и стропила считается по реальному положению в пространстве, а не по плоской проекции.",
+  },
+  {
+    q: "Можно ли забить свои цены на трубу, сварку и покраску?",
+    a: "Да. В каталоге профилей вы задаёте нужные сечения (прямоугольную и квадратную трубу), толщину стенки и цену за погонный метр. Тарифы на покраску и сварку настраиваются прямо в проекте и в разделе настроек.",
+  },
+  {
+    q: "Заменяет ли MetalCalc инженерный прочностной расчёт?",
+    a: "Нет. Программа предназначена для проектирования геометрии, проверки стыков и расчёта стоимости материалов и работ. Для ответственных сооружений сечение трубы нужно проверять по нагрузкам отдельно.",
+  },
+  {
+    q: "Как сохраняются проекты и можно ли работать с другого компьютера?",
+    a: "Все ваши проекты и настроенный каталог труб сохраняются в вашем аккаунте. Войти можно по электронной почте или через Яндекс ID.",
   },
 ];
 
@@ -225,10 +270,10 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-[var(--mc-bg-app)] text-[var(--mc-text)]">
-      {/* Фоновая инженерная сетка и мягкое свечение */}
+      {/* Фоновая сетка чертежа */}
       <div
         aria-hidden="true"
-        className="mc-blueprint-grid pointer-events-none absolute inset-x-0 top-0 h-[560px] opacity-30 [mask-image:linear-gradient(to_bottom,black_30%,transparent_100%)]"
+        className="mc-blueprint-grid pointer-events-none absolute inset-x-0 top-0 h-[620px] opacity-30 [mask-image:linear-gradient(to_bottom,black_30%,transparent_100%)]"
       />
       <div
         aria-hidden="true"
@@ -250,17 +295,23 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
               <span className="text-sm font-semibold tracking-tight text-[var(--mc-text)]">
                 MetalCalc
               </span>
-              <span className="hidden rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--mc-text-muted)] sm:inline">
-                CAD + BOM
-              </span>
             </Link>
 
-            <nav className="hidden items-center gap-5 text-xs font-medium text-[var(--mc-text-muted)] md:flex">
-              <a href="#workflow" className="transition-colors hover:text-[var(--mc-text)]">
-                Как это работает
+            <nav className="hidden items-center gap-5 text-xs font-medium text-[var(--mc-text-muted)] lg:flex">
+              <a href="#workspace" className="transition-colors hover:text-[var(--mc-text)]">
+                2D и 3D
               </a>
-              <a href="#features" className="transition-colors hover:text-[var(--mc-text)]">
-                Возможности
+              <a href="#joints" className="transition-colors hover:text-[var(--mc-text)]">
+                Стыки труб
+              </a>
+              <a href="#pricing" className="transition-colors hover:text-[var(--mc-text)]">
+                Профили и смета
+              </a>
+              <a href="#export" className="transition-colors hover:text-[var(--mc-text)]">
+                PDF и Excel
+              </a>
+              <a href="#faq" className="transition-colors hover:text-[var(--mc-text)]">
+                Вопросы
               </a>
             </nav>
           </div>
@@ -328,7 +379,7 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
                   href="/register?next=%2Feditor"
                   className="inline-flex items-center gap-1.5 rounded-md bg-[var(--mc-brand)] px-3.5 py-1.5 text-xs font-medium text-[var(--mc-brand-text)] transition-colors hover:bg-[var(--mc-brand-light)]"
                 >
-                  <span>Начать</span>
+                  <span>Создать аккаунт</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </>
@@ -338,33 +389,34 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
       </header>
 
       <main className="relative z-10 flex-1">
-        {/* Главный экран (Hero + живой превью-виджет) */}
+        {/* Главный экран (Hero + живой пример) */}
         <section className="mx-auto max-w-6xl px-4 pb-12 pt-10 sm:px-6 lg:pb-16 lg:pt-16">
           <div className="grid items-center gap-10 lg:grid-cols-12">
-            {/* Левый блок */}
             <div className="space-y-6 lg:col-span-6">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] px-3 py-1 text-[11px] font-medium text-[var(--mc-brand-inline)]">
-                <Sparkles className="h-3.5 w-3.5" />
-                <span className="font-mono tracking-tight">2D ЧЕРТЁЖ · 3D СЦЕНА · АВТОСМЕТА</span>
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] px-3 py-1 font-mono text-[11px] font-medium text-[var(--mc-brand-inline)]">
+                ПРОЕКТИРОВАНИЕ И СМЕТА МЕТАЛЛОКОНСТРУКЦИЙ
               </div>
 
               <h1 className="text-3xl font-bold leading-[1.1] tracking-tight text-[var(--mc-text)] sm:text-5xl">
                 Начертите каркас.{" "}
-                <span className="text-[var(--mc-brand-inline)]">Смету посчитает сам.</span>
+                <span className="text-[var(--mc-brand-inline)]">
+                  Метраж, стыки и смету посчитает программа.
+                </span>
               </h1>
 
-              <p className="max-w-lg text-sm leading-relaxed text-[var(--mc-text-secondary)] sm:text-base">
-                Браузерная САПР-система для проектирования конструкций из профильной трубы:
-                ортогональные виды, объёмная сцена с подрезкой торцов и мгновенный расчёт в PDF и
-                Excel.
+              <p className="max-w-xl text-sm leading-relaxed text-[var(--mc-text-secondary)] sm:text-base">
+                MetalCalc — рабочая программа для расчёта навесов, ферм, ворот, верстаков и
+                стеллажей из профильной трубы. Вы рисуете каркас в 2D и проверяете в 3D, а
+                программа сразу считает закупочный метраж, количество швов, покраску и готовит PDF
+                с Excel.
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-1">
                 <Link
                   href={activeUser ? "/editor" : "/register?next=%2Feditor"}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[var(--mc-brand)] px-5 py-3 text-sm font-medium text-[var(--mc-brand-text)] shadow-sm transition-colors hover:bg-[var(--mc-brand-light)]"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[var(--mc-brand)] px-5 py-3 text-sm font-semibold text-[var(--mc-brand-text)] shadow-sm transition-colors hover:bg-[var(--mc-brand-light)]"
                 >
-                  <span>{activeUser ? "Открыть холст" : "Попробовать бесплатно"}</span>
+                  <span>{activeUser ? "Открыть редактор" : "Начать работу"}</span>
                   <ArrowRight className="h-4 w-4" />
                 </Link>
 
@@ -372,22 +424,28 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
                   href={activeUser ? "/projects" : "/login?next=%2Feditor"}
                   className="inline-flex items-center gap-2 rounded-lg border border-[var(--mc-border-strong)] bg-[var(--mc-bg-panel)] px-5 py-3 text-sm font-medium text-[var(--mc-text)] transition-colors hover:bg-[var(--mc-bg-hover)]"
                 >
-                  <span>{activeUser ? "Мои проекты" : "Войти в аккаунт"}</span>
+                  <span>{activeUser ? "Мои проекты" : "У меня уже есть аккаунт"}</span>
                 </Link>
               </div>
 
               <div className="grid grid-cols-3 gap-3 border-t border-[var(--mc-border)] pt-5">
                 <div>
-                  <div className="font-mono text-sm font-semibold text-[var(--mc-text)]">±1 мм</div>
-                  <div className="mt-0.5 text-[11px] text-[var(--mc-text-muted)]">Точность сетки и привязок</div>
+                  <div className="font-mono text-sm font-semibold text-[var(--mc-text)]">до 1 мм</div>
+                  <div className="mt-0.5 text-[11px] text-[var(--mc-text-muted)]">
+                    Точность размеров и привязок
+                  </div>
                 </div>
                 <div>
                   <div className="font-mono text-sm font-semibold text-[var(--mc-text)]">XY · XZ · YZ</div>
-                  <div className="mt-0.5 text-[11px] text-[var(--mc-text-muted)]">3D-длины раскосов</div>
+                  <div className="mt-0.5 text-[11px] text-[var(--mc-text-muted)]">
+                    Три вида и объёмная 3D-модель
+                  </div>
                 </div>
                 <div>
                   <div className="font-mono text-sm font-semibold text-[var(--mc-text)]">PDF + XLSX</div>
-                  <div className="mt-0.5 text-[11px] text-[var(--mc-text-muted)]">Готово для цеха</div>
+                  <div className="mt-0.5 text-[11px] text-[var(--mc-text-muted)]">
+                    Чертежи и ведомость резки
+                  </div>
                 </div>
               </div>
             </div>
@@ -395,12 +453,11 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
             {/* Правый блок: интерактивная демонстрация расчёта */}
             <div className="lg:col-span-6">
               <div className="overflow-hidden rounded-2xl border border-[var(--mc-border-strong)] bg-[var(--mc-bg-panel)] shadow-2xl">
-                {/* Заголовок окна CAD */}
                 <div className="flex items-center justify-between border-b border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-4 py-2.5">
                   <div className="flex items-center gap-2">
                     <Compass className="h-3.5 w-3.5 text-[var(--mc-brand-inline)]" />
                     <span className="font-mono text-[11px] font-medium text-[var(--mc-text-secondary)]">
-                      {activePreset.code} · Изометрия 3D
+                      Пример расчёта
                     </span>
                   </div>
                   <span className="font-mono text-[11px] text-[var(--mc-text-muted)]">
@@ -409,7 +466,6 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
                 </div>
 
                 <div className="p-3.5">
-                  {/* Переключатель примеров */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
                     <div
                       className="flex items-center gap-1 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-app)] p-0.5"
@@ -441,7 +497,6 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
                     </span>
                   </div>
 
-                  {/* Сетка чертежа + 3D изометрия */}
                   <div className="relative h-52 overflow-hidden rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-canvas)] p-3">
                     <div
                       className="pointer-events-none absolute inset-0 opacity-45"
@@ -455,7 +510,7 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
                     <div className="relative z-10 flex items-center justify-between text-[10px] text-[var(--mc-text-muted)]">
                       <span className="inline-flex items-center gap-1.5 rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/90 px-2 py-0.5 font-mono">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                        LIVE PREVIEW
+                        3D-СЦЕНА
                       </span>
                       <span className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/90 px-2 py-0.5 font-mono">
                         X / Y / Z
@@ -467,13 +522,12 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
                     </div>
                   </div>
 
-                  {/* Живая строка сметы */}
                   <div className="mt-3 rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] p-3.5">
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-4 text-xs">
                         <div>
                           <div className="text-[10px] uppercase tracking-wider text-[var(--mc-text-muted)]">
-                            Металл
+                            Профтруба
                           </div>
                           <div className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-[var(--mc-text)]">
                             {activePreset.length}
@@ -482,7 +536,7 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
                         <div className="h-7 w-px bg-[var(--mc-border)]" />
                         <div>
                           <div className="text-[10px] uppercase tracking-wider text-[var(--mc-text-muted)]">
-                            Узлы сварки
+                            Стыки сварки
                           </div>
                           <div className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-[var(--mc-text)]">
                             {activePreset.joints} шт.
@@ -500,7 +554,6 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
                       </div>
                     </div>
 
-                    {/* Шкала структуры бюджета */}
                     <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-[var(--mc-border)]">
                       <div
                         style={{ width: `${activePreset.metalShare}%` }}
@@ -540,166 +593,358 @@ export function LandingPageClient({ initialUser }: LandingPageClientProps) {
           </div>
         </section>
 
-        {/* Процесс работы (3 шага) */}
-        <section id="workflow" className="mx-auto max-w-6xl px-4 pb-10 sm:px-6">
-          <div className="grid gap-3 rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-4 sm:grid-cols-3 sm:gap-4">
-            <div className="flex items-start gap-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] font-mono text-xs font-semibold text-[var(--mc-brand-inline)]">
-                01
-              </span>
-              <div>
-                <h2 className="text-xs font-semibold text-[var(--mc-text)]">Эскиз в 2D и 3D</h2>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--mc-text-muted)]">
-                  Рисуйте стержни в трёх ортогональных проекциях или на 3D-плоскостях с привязками.
-                </p>
-              </div>
+        {/* Секция 1: 2D-виды и 3D-модель */}
+        <section id="workspace" className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+          <div className="mb-7 max-w-2xl space-y-2">
+            <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-brand-inline)]">
+              01 · Черчение в 2D и 3D
             </div>
-
-            <div className="flex items-start gap-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] font-mono text-xs font-semibold text-[var(--mc-brand-inline)]">
-                02
-              </span>
-              <div>
-                <h2 className="text-xs font-semibold text-[var(--mc-text)]">Профили и стыки</h2>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--mc-text-muted)]">
-                  Назначайте трубы из каталога и автоматически определяйте узлы сварки и подрезки.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] font-mono text-xs font-semibold text-[var(--mc-brand-inline)]">
-                03
-              </span>
-              <div>
-                <h2 className="text-xs font-semibold text-[var(--mc-text)]">Спецификация и экспорт</h2>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--mc-text-muted)]">
-                  Получите точную ведомость деталей, чертежи с размерами и смету в PDF и Excel.
-                </p>
-              </div>
-            </div>
+            <h2 className="text-2xl font-bold tracking-tight text-[var(--mc-text)] sm:text-3xl">
+              Один каркас — и на плоских чертежах, и в объёме
+            </h2>
+            <p className="text-sm leading-relaxed text-[var(--mc-text-muted)]">
+              Любое изменение на виде сверху сразу видно спереди, сбоку и в 3D-сцене. Не нужно
+              сводить разные чертежи вручную и пересчитывать длины наклонных труб.
+            </p>
           </div>
-        </section>
 
-        {/* Bento-блок возможностей */}
-        <section id="features" className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
-          <div className="grid gap-3.5 md:grid-cols-12">
-            <div className="rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-5 transition-colors hover:border-[var(--mc-border-strong)] md:col-span-5">
+          <div className="grid gap-4 lg:grid-cols-12">
+            <div className="rounded-2xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-6 lg:col-span-6">
               <div className="flex items-center justify-between">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] text-[var(--mc-brand-inline)]">
                   <Layers className="h-4 w-4" />
                 </div>
-                <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--mc-text-subtle)]">
+                <span className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-2 py-0.5 font-mono text-[10px] text-[var(--mc-text-muted)]">
                   XY · XZ · YZ
                 </span>
               </div>
-              <h2 className="mt-4 text-sm font-semibold text-[var(--mc-text)]">
-                Три проекции на одном экране
-              </h2>
-              <p className="mt-1.5 text-xs leading-relaxed text-[var(--mc-text-muted)]">
-                Вид сверху, спереди и сбоку синхронизированы в реальном времени с расчётом
-                истинной пространственной длины каждого раскоса.
+
+              <h3 className="mt-4 text-base font-semibold text-[var(--mc-text)]">
+                Три ортогональных вида на одном экране
+              </h3>
+              <p className="mt-2 text-xs leading-relaxed text-[var(--mc-text-muted)]">
+                Сверху, спереди и сбоку с настраиваемым шагом сетки. Если нужно сосредоточиться на
+                плане, вид сверху разворачивается на всё рабочее поле в один клик.
               </p>
+
+              <div className="mt-4 grid grid-cols-2 gap-2 text-[11px] text-[var(--mc-text-secondary)]">
+                <div className="flex items-center gap-2 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-app)] px-3 py-2">
+                  <Grid3x3 className="h-3.5 w-3.5 shrink-0 text-[var(--mc-brand-inline)]" />
+                  <span>Привязка к сетке (мм)</span>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-app)] px-3 py-2">
+                  <Crosshair className="h-3.5 w-3.5 shrink-0 text-[var(--mc-brand-inline)]" />
+                  <span>К концам и пересечениям</span>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-app)] px-3 py-2">
+                  <Ruler className="h-3.5 w-3.5 shrink-0 text-[var(--mc-brand-inline)]" />
+                  <span>Привязка к углам 45°</span>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-app)] px-3 py-2">
+                  <Calculator className="h-3.5 w-3.5 shrink-0 text-[var(--mc-brand-inline)]" />
+                  <span>Точная 3D-длина укосин</span>
+                </div>
+              </div>
             </div>
 
-            <div className="rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-5 transition-colors hover:border-[var(--mc-border-strong)] md:col-span-4">
+            <div className="rounded-2xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-6 lg:col-span-6">
               <div className="flex items-center justify-between">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] text-[var(--mc-brand-inline)]">
                   <Box className="h-4 w-4" />
                 </div>
-                <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--mc-text-subtle)]">
-                  3D сцена
+                <span className="rounded border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-2 py-0.5 font-mono text-[10px] text-[var(--mc-text-muted)]">
+                  3D-режим
                 </span>
               </div>
-              <h2 className="mt-4 text-sm font-semibold text-[var(--mc-text)]">
-                Объём и стыковка торцов
-              </h2>
-              <p className="mt-1.5 text-xs leading-relaxed text-[var(--mc-text-muted)]">
-                Полые профильные трубы, подрезка под 45° и встык, 3D-манипулятор осей X / Y / Z.
-              </p>
-            </div>
 
-            <div className="rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-5 transition-colors hover:border-[var(--mc-border-strong)] md:col-span-3">
-              <div className="flex items-center justify-between">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] text-[var(--mc-brand-inline)]">
-                  <Calculator className="h-4 w-4" />
+              <h3 className="mt-4 text-base font-semibold text-[var(--mc-text)]">
+                Объёмная модель с реальным сечением труб
+              </h3>
+              <p className="mt-2 text-xs leading-relaxed text-[var(--mc-text-muted)]">
+                Каждая труба строится по своим размерам и толщине стенки. В 3D можно крутить
+                конструкцию со всех сторон, дорисовывать балки на нужной высоте и двигать детали
+                стрелками по осям.
+              </p>
+
+              <div className="mt-4 grid grid-cols-2 gap-2 text-[11px] text-[var(--mc-text-secondary)]">
+                <div className="rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-app)] px-3 py-2">
+                  Виды: изометрия, сверху, спереди, сбоку
                 </div>
-                <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--mc-text-subtle)]">
-                  ₽ · $ · €
-                </span>
+                <div className="rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-app)] px-3 py-2">
+                  Рабочие плоскости на любой высоте
+                </div>
+                <div className="rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-app)] px-3 py-2">
+                  Сдвиг всей трубы или отдельного торца
+                </div>
+                <div className="rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-app)] px-3 py-2">
+                  Правка точной длины детали в мм
+                </div>
               </div>
-              <h2 className="mt-4 text-sm font-semibold text-[var(--mc-text)]">
-                Смета на лету
-              </h2>
-              <p className="mt-1.5 text-xs leading-relaxed text-[var(--mc-text-muted)]">
-                Автоподсчёт металла, швов и покраски по вашим тарифам.
-              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Секция 2: Узлы сварки и подрезка торцов */}
+        <section id="joints" className="border-y border-[var(--mc-border)] bg-[var(--mc-bg-panel)]/50">
+          <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+            <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+              <div className="max-w-2xl space-y-2">
+                <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-brand-inline)]">
+                  02 · Стыки и сварные швы
+                </div>
+                <h2 className="text-2xl font-bold tracking-tight text-[var(--mc-text)] sm:text-3xl">
+                  Подрезка торцов и расчёт сварки
+                </h2>
+                <p className="text-sm leading-relaxed text-[var(--mc-text-muted)]">
+                  Программа сама находит углы, Т-примыкания и пересечения труб. Длину шва можно
+                  считать либо по количеству соединений, либо в метрах шва с оценкой по периметру
+                  трубы.
+                </p>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] px-3 py-2 text-xs text-[var(--mc-text-secondary)]">
+                <GitCommitHorizontal className="h-4 w-4 text-[var(--mc-warning-text)]" />
+                <span>За стык или за погонный метр шва</span>
+              </div>
             </div>
 
-            {/* Экспорт + CTA */}
-            <div className="flex flex-col justify-between gap-4 rounded-xl border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] p-5 sm:flex-row sm:items-center md:col-span-12">
-              <div className="flex items-start gap-3.5">
-                <div className="flex items-center gap-1.5 pt-0.5">
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] text-[var(--mc-success-text)]">
-                    <FileSpreadsheet className="h-4 w-4" />
-                  </span>
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] text-[var(--mc-brand-inline)]">
-                    <FileText className="h-4 w-4" />
-                  </span>
-                </div>
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-sm font-semibold text-[var(--mc-text)]">
-                      Готовая спецификация в PDF и Excel в один клик
-                    </h2>
-                    <span className="inline-flex items-center gap-1 rounded border border-[var(--mc-success-border)] bg-[var(--mc-success-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--mc-success-text)]">
-                      <CheckCircle2 className="h-3 w-3" />
-                      Кириллица и 3 проекции
-                    </span>
+            <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+              {JOINT_MODES.map((mode) => (
+                <div
+                  key={mode.title}
+                  className="flex flex-col justify-between rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-4"
+                >
+                  <div>
+                    <Scissors className="h-4 w-4 text-[var(--mc-brand-inline)]" />
+                    <h3 className="mt-3 text-sm font-semibold text-[var(--mc-text)]">
+                      {mode.title}
+                    </h3>
+                    <p className="mt-1.5 text-xs leading-relaxed text-[var(--mc-text-muted)]">
+                      {mode.description}
+                    </p>
                   </div>
-                  <p className="mt-1 text-xs text-[var(--mc-text-secondary)]">
-                    Ведомость деталей, чертежи с трёх сторон и итоговый расчёт для заказчика или
-                    производства.
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Секция 3: Профили и смета */}
+        <section id="pricing" className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+          <div className="mb-7 max-w-2xl space-y-2">
+            <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-brand-inline)]">
+              03 · Каталог труб и расчёт стоимости
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight text-[var(--mc-text)] sm:text-3xl">
+              Свой прайс на металл, сварку и покраску
+            </h2>
+            <p className="text-sm leading-relaxed text-[var(--mc-text-muted)]">
+              Задайте цены вашей металлобазы и расценки на работы — смета обновляется автоматически
+              при добавлении или изменении каждой трубы.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] text-[var(--mc-brand-inline)]">
+                <SlidersHorizontal className="h-4 w-4" />
+              </div>
+              <h3 className="mt-4 text-sm font-semibold text-[var(--mc-text)]">
+                Каталог профильных труб
+              </h3>
+              <p className="mt-1.5 text-xs leading-relaxed text-[var(--mc-text-muted)]">
+                Квадратные и прямоугольные трубы любых размеров и толщины стенки. Для каждого
+                профиля задаются цвет на чертеже и цена за метр — её можно заменить сразу у всех
+                деталей проекта.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] text-[var(--mc-brand-inline)]">
+                <Paintbrush className="h-4 w-4" />
+              </div>
+              <h3 className="mt-4 text-sm font-semibold text-[var(--mc-text)]">
+                Учёт покраски по деталям
+              </h3>
+              <p className="mt-1.5 text-xs leading-relaxed text-[var(--mc-text-muted)]">
+                Покраска считается по общей длине деталей. Отдельные элементы легко исключить из
+                покраски в один клик — например, закладные или бетонируемую часть опорных столбов.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] text-[var(--mc-brand-inline)]">
+                <Calculator className="h-4 w-4" />
+              </div>
+              <h3 className="mt-4 text-sm font-semibold text-[var(--mc-text)]">
+                Гибкие тарифы и 5 валют
+              </h3>
+              <p className="mt-1.5 text-xs leading-relaxed text-[var(--mc-text-muted)]">
+                Считайте смету в рублях (₽), долларах ($), евро (€), тенге (₸) или белорусских
+                рублях (Br). Итоговая сумма всегда видна в нижней панели редактора.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Секция 4: Что попадает в PDF и Excel */}
+        <section id="export" className="mx-auto max-w-6xl px-4 pb-12 sm:px-6">
+          <div className="mb-6 max-w-2xl space-y-2">
+            <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-brand-inline)]">
+              04 · Выгрузка документов
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight text-[var(--mc-text)] sm:text-3xl">
+              Готовые файлы для заказчика и для цеха
+            </h2>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-2xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-6">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] text-[var(--mc-brand-inline)]">
+                  <FileText className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3 className="text-base font-semibold text-[var(--mc-text)]">
+                    Отчёт в PDF (.pdf)
+                  </h3>
+                  <p className="text-xs text-[var(--mc-text-muted)]">
+                    Удобно отправить клиенту на согласование
                   </p>
                 </div>
               </div>
-
-              <Link
-                href={activeUser ? "/editor" : "/register?next=%2Feditor"}
-                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[var(--mc-brand)] px-4 py-2.5 text-xs font-medium text-[var(--mc-brand-text)] shadow-xs transition-colors hover:bg-[var(--mc-brand-light)]"
-              >
-                <Ruler className="h-3.5 w-3.5" />
-                <span>{activeUser ? "Перейти в редактор" : "Начать проект"}</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
+              <ul className="mt-4 space-y-2 text-xs text-[var(--mc-text-secondary)]">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--mc-success-text)]" />
+                  <span>Чертежи конструкции с трёх сторон (XY, XZ, YZ) с габаритами и цветами профилей.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--mc-success-text)]" />
+                  <span>Таблица материалов, стоимость сварки, покраски и итоговая цена.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--mc-success-text)]" />
+                  <span>Ведомость всех деталей с длиной каждого отрезка.</span>
+                </li>
+              </ul>
             </div>
+
+            <div className="rounded-2xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-6">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--mc-success-border)] bg-[var(--mc-success-soft)] text-[var(--mc-success-text)]">
+                  <FileSpreadsheet className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3 className="text-base font-semibold text-[var(--mc-text)]">
+                    Книга Excel (.xlsx)
+                  </h3>
+                  <p className="text-xs text-[var(--mc-text-muted)]">
+                    Для закупки металла и раскроя в цехе
+                  </p>
+                </div>
+              </div>
+              <ul className="mt-4 space-y-2 text-xs text-[var(--mc-text-secondary)]">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--mc-success-text)]" />
+                  <span>Лист «Смета и материалы» — метраж по каждому профилю, цены, работы и итог.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--mc-success-text)]" />
+                  <span>Лист «Спецификация элементов» — список всех заготовок с пометками и размерами.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--mc-success-text)]" />
+                  <span>Копирование краткой текстовой сметы для быстрой отправки в мессенджер.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* Секция 5: Частые вопросы */}
+        <section id="faq" className="mx-auto max-w-6xl px-4 pb-12 sm:px-6">
+          <div className="mb-6 space-y-1.5">
+            <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[var(--mc-brand-inline)]">
+              05 · Частые вопросы
+            </div>
+            <h2 className="text-xl font-bold tracking-tight text-[var(--mc-text)] sm:text-2xl">
+              Коротко о работе с программой
+            </h2>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            {FAQ_ITEMS.map((item) => (
+              <details
+                key={item.q}
+                className="group rounded-xl border border-[var(--mc-border)] bg-[var(--mc-bg-panel)] p-4 open:border-[var(--mc-border-strong)]"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold text-[var(--mc-text)]">
+                  <span>{item.q}</span>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-[var(--mc-text-muted)] transition-transform group-open:rotate-180" />
+                </summary>
+                <p className="mt-2.5 border-t border-[var(--mc-border)] pt-2.5 text-xs leading-relaxed text-[var(--mc-text-muted)]">
+                  {item.a}
+                </p>
+              </details>
+            ))}
+          </div>
+        </section>
+
+        {/* Финальный CTA */}
+        <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
+          <div className="flex flex-col justify-between gap-4 rounded-2xl border border-[var(--mc-brand-border)] bg-[var(--mc-brand-soft)] p-6 sm:flex-row sm:items-center">
+            <div className="space-y-1">
+              <h2 className="text-base font-bold text-[var(--mc-text)] sm:text-lg">
+                Попробуйте собрать свой первый проект
+              </h2>
+              <p className="text-xs text-[var(--mc-text-secondary)]">
+                Регистрация занимает минуту — после входа можно сразу чертить, крутить 3D и
+                выгружать смету.
+              </p>
+            </div>
+
+            <Link
+              href={activeUser ? "/editor" : "/register?next=%2Feditor"}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[var(--mc-brand)] px-5 py-3 text-xs font-semibold text-[var(--mc-brand-text)] shadow-xs transition-colors hover:bg-[var(--mc-brand-light)]"
+            >
+              <span>{activeUser ? "Перейти в редактор" : "Открыть редактор"}</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-[var(--mc-border)] bg-[var(--mc-bg-panel)] py-5 text-xs text-[var(--mc-text-subtle)]">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 sm:px-6">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-[var(--mc-brand)] font-mono text-[10px] font-bold text-[var(--mc-brand-text)]">
-              MC
-            </span>
-            <span>
-              <strong className="font-semibold text-[var(--mc-text)]">MetalCalc</strong> · Проектирование и смета металлоконструкций
-            </span>
+      <footer className="border-t border-[var(--mc-border)] bg-[var(--mc-bg-panel)] py-6 text-xs text-[var(--mc-text-subtle)]">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-[var(--mc-brand)] font-mono text-[10px] font-bold text-[var(--mc-brand-text)]">
+                MC
+              </span>
+              <strong className="font-semibold text-[var(--mc-text)]">MetalCalc</strong>
+              <span>· Проектирование металлоконструкций и смета</span>
+            </div>
           </div>
-          <div className="flex items-center gap-5">
+
+          <div className="flex flex-wrap items-center gap-4">
             <Link href="/editor" className="transition-colors hover:text-[var(--mc-text)]">
               Редактор
             </Link>
             <Link href="/projects" className="transition-colors hover:text-[var(--mc-text)]">
               Проекты
             </Link>
-            <Link href="/settings" className="transition-colors hover:text-[var(--mc-text)]">
-              Настройки
+            <Link href="/terms" className="transition-colors hover:text-[var(--mc-text)]">
+              Соглашение
             </Link>
-            <Link href="/login?next=%2Feditor" className="transition-colors hover:text-[var(--mc-text)]">
-              Вход
+            <Link href="/privacy" className="transition-colors hover:text-[var(--mc-text)]">
+              Политика 152-ФЗ
             </Link>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("metalcalc:open-cookie-notice"))}
+              className="transition-colors hover:text-[var(--mc-text)]"
+            >
+              О cookie
+            </button>
           </div>
         </div>
       </footer>

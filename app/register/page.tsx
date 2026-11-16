@@ -30,6 +30,8 @@ function RegisterFormContent() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const visibleError = error ?? oauthError;
@@ -72,6 +74,13 @@ function RegisterFormContent() {
       return;
     }
 
+    if (!acceptedTerms || !acceptedPrivacy) {
+      setError(
+        "Отметьте согласие с пользовательским соглашением и обработкой персональных данных (152-ФЗ)."
+      );
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch("/api/auth/register", {
@@ -81,6 +90,8 @@ function RegisterFormContent() {
           name: name.trim(),
           email: email.trim(),
           password,
+          acceptedTerms,
+          acceptedPrivacy,
         }),
       });
 
@@ -232,9 +243,58 @@ function RegisterFormContent() {
           )}
         </label>
 
+        <div className="space-y-2.5 rounded-lg border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] p-3">
+          <label className="flex cursor-pointer items-start gap-2.5 text-[11px] leading-relaxed text-[var(--mc-text-secondary)]">
+            <input
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[var(--mc-brand)]"
+            />
+            <span>
+              Принимаю условия{" "}
+              <Link
+                href="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-[var(--mc-brand-inline)] underline-offset-2 hover:underline"
+              >
+                Пользовательского соглашения
+              </Link>
+            </span>
+          </label>
+
+          <label className="flex cursor-pointer items-start gap-2.5 text-[11px] leading-relaxed text-[var(--mc-text-secondary)]">
+            <input
+              type="checkbox"
+              checked={acceptedPrivacy}
+              onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[var(--mc-brand)]"
+            />
+            <span>
+              Даю{" "}
+              <Link
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-[var(--mc-brand-inline)] underline-offset-2 hover:underline"
+              >
+                согласие на обработку персональных данных
+              </Link>{" "}
+              (имя, email) в соответствии с № 152-ФЗ
+            </span>
+          </label>
+        </div>
+
         <button
           type="submit"
-          disabled={submitting || !strength.isAcceptable || password !== confirmPassword}
+          disabled={
+            submitting ||
+            !strength.isAcceptable ||
+            password !== confirmPassword ||
+            !acceptedTerms ||
+            !acceptedPrivacy
+          }
           className="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-lg bg-[var(--mc-brand)] px-4 py-2.5 text-xs font-semibold text-[var(--mc-brand-text)] transition-colors hover:bg-[var(--mc-brand-light)] disabled:opacity-60"
         >
           {submitting ? (
@@ -247,6 +307,18 @@ function RegisterFormContent() {
       </form>
 
       <OAuthButtons mode="register" oauthProviders={oauthProviders} nextPath={nextPath} />
+
+      <p className="text-center text-[11px] leading-relaxed text-[var(--mc-text-subtle)]">
+        При входе через Яндекс ID вы подтверждаете ознакомление с{" "}
+        <Link href="/terms" className="text-[var(--mc-text-muted)] hover:underline">
+          соглашением
+        </Link>{" "}
+        и{" "}
+        <Link href="/privacy" className="text-[var(--mc-text-muted)] hover:underline">
+          политикой 152-ФЗ
+        </Link>
+        .
+      </p>
 
       <p className="text-center text-xs text-[var(--mc-text-muted)]">
         Уже есть аккаунт?{" "}

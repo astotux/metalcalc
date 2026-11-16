@@ -216,7 +216,7 @@ export function TopToolbar() {
                     ? "border border-[var(--mc-danger-border)] bg-[var(--mc-danger-soft)] text-[var(--mc-danger-text)]"
                     : "text-[var(--mc-text-secondary)] hover:bg-[var(--mc-bg-hover)] hover:text-[var(--mc-text)]"
               }`}
-              title="Сохранить проект в SQLite"
+              title="Сохранить проект"
             >
               <Save className="h-3.5 w-3.5" />
               <span className="hidden xl:inline">

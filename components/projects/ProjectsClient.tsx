@@ -147,7 +147,7 @@ export function ProjectsClient() {
         <div className="flex items-center gap-2.5">
           <div className="hidden items-center gap-1.5 rounded-md border border-[var(--mc-border)] bg-[var(--mc-bg-elevated)] px-2.5 py-1 text-[11px] text-[var(--mc-text-muted)] md:inline-flex">
             <Database className="h-3.5 w-3.5 text-[var(--mc-success-text)]" />
-            <span>SQLite · Личные проекты</span>
+            <span>Личные проекты</span>
           </div>
 
           <div
@@ -285,7 +285,7 @@ export function ProjectsClient() {
             <div className="p-10 text-center">
               <p className="text-xs text-[var(--mc-text-muted)]">
                 {projectsLoading
-                  ? "Загрузка проектов из SQLite..."
+                  ? "Загрузка проектов..."
                   : "Сохранённых проектов пока нет. Нажмите «Сохранить» в редакторе или создайте проект выше."}
               </p>
             </div>

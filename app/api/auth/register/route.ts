@@ -24,6 +24,8 @@ const registerSchema = z.object({
     .max(80, "Имя слишком длинное"),
   email: z.string().trim().email("Введите корректный email"),
   password: z.string().min(8, "Пароль должен содержать не менее 8 символов").max(128),
+  acceptedTerms: z.boolean().optional(),
+  acceptedPrivacy: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
@@ -33,6 +35,16 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: parsed.error.issues[0]?.message ?? "Некорректные данные регистрации." },
+        { status: 400 }
+      );
+    }
+
+    if (parsed.data.acceptedTerms === false || parsed.data.acceptedPrivacy === false) {
+      return NextResponse.json(
+        {
+          error:
+            "Для регистрации необходимо принять пользовательское соглашение и дать согласие на обработку персональных данных.",
+        },
         { status: 400 }
       );
     }
